@@ -19,7 +19,8 @@ TARGETS	= $(BINDIR)/client $(BINDIR)/server
 all: $(TARGETS)
 
 CLIENTOBJS = $(OBJDIR)/client.o 
-SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o
+SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o \
+$(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o 
 
 $(BINDIR)/client: $(CLIENTOBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBSYS)
@@ -30,7 +31,8 @@ $(BINDIR)/server: $(SERVEROBJS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(OBJDIR)/server.o: $(SRCDIR)/server.c $(INCDIR)/hasht.h $(INCDIR)/conc_hasht.h $(INCDIR)/list.h $(INCDIR)/int_list.h
+$(OBJDIR)/server.o: $(SRCDIR)/server.c $(INCDIR)/hasht.h $(INCDIR)/conc_hasht.h $(INCDIR)/list.h $(INCDIR)/int_list.h \
+$(INCDIR)/eviction_policy.h $(INCDIR)/config_parser.h $(INCDIR)/util.h $(INCDIR)/protocol.h
 
 $(OBJDIR)/client.o: $(SRCDIR)/client.c
 
@@ -41,6 +43,13 @@ $(OBJDIR)/conc_hasht.o: $(SRCDIR)/conc_hasht.c $(INCDIR)/hasht.h $(INCDIR)/conc_
 $(OBJDIR)/list.o: $(SRCDIR)/list.c $(INCDIR)/list.h
 
 $(OBJDIR)/int_list.o: $(SRCDIR)/int_list.c $(INCDIR)/list.h $(INCDIR)/int_list.h
+
+$(OBJDIR)/util.o: $(SRCDIR)/util.c $(INCDIR)/util.h
+
+$(OBJDIR)/eviction_policy.o: $(SRCDIR)/eviction_policy.c $(INCDIR)/eviction_policy.h
+
+$(OBJDIR)/config_parser.o: $(SRCDIR)/config_parser.c $(INCDIR)/config_parser.h $(INCDIR)/protocol.h \
+$(INCDIR)/eviction_policy.h $(INCDIR)/util.h
 
 clean: 
 	@rm -f $(TARGETS)
