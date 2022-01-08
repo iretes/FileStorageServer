@@ -74,8 +74,8 @@ void list_destroy(list_t* list, int free_data);
  * @function    list_tail_insert()
  * @brief       Inserisce il dato in coda alla lista.
  *
- * @param list Oggetto che rappresenta la linked list
- * @param data Dato da inserire
+ * @param list  Oggetto che rappresenta la linked list
+ * @param data  Dato da inserire
  * 
  * @return      0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *              In caso di fallimento errno può assumere i seguenti valori:

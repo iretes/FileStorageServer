@@ -13,8 +13,8 @@
 #include <util.h>
 
 /**
- * @function 	usage()
- * @brief		Stampa il messaggio di usage
+ * @function	usage()
+ * @brief		Stampa il messaggio di usage.
  * 
  * @param prog	Il nome del programma
  */
