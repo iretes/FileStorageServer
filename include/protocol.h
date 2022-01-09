@@ -1,6 +1,6 @@
 /**
- * @file	protocol.h
- * @brief	Header per la definizione del protocollo tra client e server.
+ * @file    protocol.h
+ * @brief   Header per la definizione del protocollo tra client e server.
  */
 
 #ifndef PROTOCOL_H

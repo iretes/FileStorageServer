@@ -380,5 +380,3 @@
 int is_number(const char* s, long* n);
 
 #endif /* UTIL_H */
-
-

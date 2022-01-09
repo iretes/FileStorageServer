@@ -201,4 +201,3 @@ int_list_t* int_list_cpy(int_list_t* int_list);
          node = node->next)
 
 #endif /* INT_LIST_H */
-

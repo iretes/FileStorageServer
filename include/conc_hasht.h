@@ -22,10 +22,10 @@
  * @var mutex_attrs Array di attributi delle mutex associate ai segmenti
  */
 typedef struct conc_hasht {
-    hasht_t* ht;
-    size_t nsegments;
-    pthread_mutex_t* mutexs;
-    pthread_mutexattr_t* mutex_attrs;
+	hasht_t* ht;
+	size_t nsegments;
+	pthread_mutex_t* mutexs;
+	pthread_mutexattr_t* mutex_attrs;
 } conc_hasht_t;
 
 /**
