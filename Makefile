@@ -20,7 +20,7 @@ all: $(TARGETS)
 
 CLIENTOBJS = $(OBJDIR)/client.o 
 SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o \
-$(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o 
+$(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o $(OBJDIR)/threadpool.o
 
 $(BINDIR)/client: $(CLIENTOBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBSYS)
@@ -32,7 +32,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 $(OBJDIR)/server.o: $(SRCDIR)/server.c $(INCDIR)/hasht.h $(INCDIR)/conc_hasht.h $(INCDIR)/list.h $(INCDIR)/int_list.h \
-$(INCDIR)/eviction_policy.h $(INCDIR)/config_parser.h $(INCDIR)/util.h $(INCDIR)/protocol.h
+$(INCDIR)/eviction_policy.h $(INCDIR)/config_parser.h $(INCDIR)/util.h $(INCDIR)/protocol.h $(INCDIR)/threadpool.h
 
 $(OBJDIR)/client.o: $(SRCDIR)/client.c
 
@@ -50,6 +50,8 @@ $(OBJDIR)/eviction_policy.o: $(SRCDIR)/eviction_policy.c $(INCDIR)/eviction_poli
 
 $(OBJDIR)/config_parser.o: $(SRCDIR)/config_parser.c $(INCDIR)/config_parser.h $(INCDIR)/protocol.h \
 $(INCDIR)/eviction_policy.h $(INCDIR)/util.h
+
+$(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h $(INCDIR)/util.h
 
 clean: 
 	@rm -f $(TARGETS)

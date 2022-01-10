@@ -7,6 +7,8 @@
 #define UTIL_H
 
 #include <errno.h>
+#include <string.h>
+#include <stdio.h>
 
 /**
  * @def     EXTF
@@ -361,6 +363,36 @@
             PERRORSTR(errno) \
         } \
     } while(0);
+
+/** 
+ * @function    readn()
+ * @brief       Evita letture parziali.
+ *
+ * @param fd    Il file descriptor da cui leggere
+ * @param buf   Il buffer in cui leggere
+ * @param size  La dimensione di buf
+ * 
+ * @return      size se termina con successo,
+ *              0 se durante la lettura da fd leggo EOF,
+ *              -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ * @note        Può fallire e settare errno se si verificano gli errori specificati da read(). 
+ */
+int readn(long fd, void *buf, size_t size);
+
+/** 
+ * @function    writen()
+ * @brief       Evita scritture parziali.
+ *
+ * @param fd    Il file descriptor da cui scrivere
+ * @param buf   Il buffer in cui scrivere
+ * @param size  La dimensione di buf
+ * 
+ * @return      1 se la scrittura termina con successo,
+ *              0 se durante la scrittura la write ritorna 0,
+ *              -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ * @note        Può fallire e settare errno se si verificano gli errori specificati da write(). 
+ */
+int writen(long fd, void *buf, size_t size);
 
 /**
  * @function    is_number()

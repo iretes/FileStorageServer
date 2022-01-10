@@ -16,7 +16,7 @@
 #include <eviction_policy.h>
 #include <protocol.h>
 #include <util.h>
-
+#include <threadpool.h>
 
 /**
  * Numero massimo di connessioni in sospeso nella coda di ascolto del socket
@@ -29,6 +29,106 @@
  * Massima dimensione del path del socket file
  */
 #define UNIX_PATH_MAX 108
+
+void open_file_handler(int master_fd, int client_fd, int worker_id, request_code_t code) {
+
+}
+
+void write_file_handler(int master_fd, int client_fd, int worker_id, request_code_t code) {
+
+}
+
+void read_file_handler(int master_fd, int client_fd, int worker_id) {
+
+}
+
+void readn_file_handler(int master_fd, int client_fd, int worker_id) {
+
+}
+
+void lock_file_handler(int master_fd, int client_fd, int worker_id) {
+
+}
+
+void unlock_file_handler(int master_fd, int client_fd, int worker_id) {
+
+}
+
+void remove_file_handler(int master_fd, int client_fd, int worker_id) {
+
+}
+
+void close_file_handler(int master_fd, int client_fd, int worker_id) {
+
+}
+
+/**
+ * @struct task_args_t
+ * @brief Struttura che raccoglie gli argomenti di un task che un worker dovrà servire
+ * 
+ * @var master_fd Descrittore per la comunicazione con il master
+ * @var client_fd Descrittore del client che ha effettuato la richiesta
+ */
+typedef struct task_args {
+	int master_fd;
+	int client_fd;
+} task_args_t;
+
+/**
+ * @function 		task_handler()
+ * @brief			Funzione eseguita dai worker thread per servire le richieste dei clienti
+ * 
+ * @param arg		Argomenti del task
+ * @param worker_id Identificativo del worker thread che gestisce la richiesta
+ */
+static void task_handler(void *arg, int worker_id) {
+	task_args_t* task_arg = (task_args_t*)arg;
+
+	int master_fd = task_arg->master_fd;
+	int client_fd = task_arg->client_fd;
+
+	int r, neg_fd = -client_fd;
+	request_code_t code;
+	r = readn(client_fd, &code, sizeof(request_code_t));
+	if (r == -1 || r == 0) {
+		free(arg);
+		writen(master_fd, &neg_fd, sizeof(int)); // da testare
+	}
+	// servo la richiesta
+	switch (code) {
+		case OPEN_NO_FLAGS:
+		case OPEN_CREATE:
+		case OPEN_LOCK:
+		case OPEN_CREATE_LOCK:
+			open_file_handler(master_fd, client_fd, worker_id, code);
+			break;
+		case WRITE:
+		case APPEND:
+			write_file_handler(master_fd, client_fd, worker_id, code);
+			break;
+		case READ:
+			read_file_handler(master_fd, client_fd, worker_id);
+			break;
+		case READN:
+			readn_file_handler(master_fd, client_fd, worker_id);
+			break;
+		case LOCK:
+			lock_file_handler(master_fd, client_fd, worker_id);
+			break;
+		case UNLOCK:
+			unlock_file_handler(master_fd, client_fd, worker_id);
+			break;
+		case REMOVE:
+			remove_file_handler(master_fd, client_fd, worker_id);
+			break;
+		case CLOSE:
+			close_file_handler(master_fd, client_fd, worker_id);
+			break;
+		default: ;
+	}
+	free(arg);
+	writen(master_fd, &client_fd, sizeof(int)); // da testare
+}
 
 /**
  * @struct              sighandler_args_t
@@ -308,14 +408,24 @@ int main(int argc, char *argv[]) {
 	EQM1_DO(bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)), r, extval = EXIT_FAILURE; goto server_exit);
 	EQM1_DO(listen(listenfd, MAXBACKLOG), r, EXTF);
 	
+	// creo il threadpool
+	threadpool_t *pool = NULL;
+	EQNULL_DO(threadpool_create(config->n_workers, config->dim_workers_queue), pool, EXTF);
+
+	// pipe per la comunicazione tra master e workers
+	int workers_pipe[2];
+	EQM1_DO(pipe(workers_pipe), r, EXTF);
+
 	// maschere per la gestione del selettore
 	fd_set set, tmpset;
 	FD_ZERO(&set);
 	FD_ZERO(&tmpset);
 	FD_SET(listenfd, &set);
 	FD_SET(signal_pipe[0], &set);
+	FD_SET(workers_pipe[0], &set);
 	int fdmax = (listenfd > signal_pipe[0]) ? listenfd : signal_pipe[0];
-
+	fdmax = (workers_pipe[0] > fdmax) ? workers_pipe[0] : fdmax;
+	
 	// numero di clienti connessi
 	int connected_clients = 0;
 
@@ -372,6 +482,28 @@ int main(int argc, char *argv[]) {
 					break;
 				}
 			}
+			else if (i == workers_pipe[0]) {
+				// un worker ha scritto nella pipe destinata alle comunicazioni tra master e workers
+
+				// leggo il descrittore scritto dal worker nella pipe
+				EQM1_DO(readn(workers_pipe[0], &client_fd, sizeof(int)), r, EXTF);
+
+				// se negativo significa che il cliente associato al descrittore -(client_fd) si è disconnesso
+				if (client_fd < 0) {
+					connected_clients --;
+					// se è stato ricevuto il segnale SIGHUP e non ci sono più clienti connessi posso terminare
+					if (is_flag_setted(sig_mutex, shut_down) && connected_clients == 0) {
+						set_flag(sig_mutex, &shut_down_now);
+						break;
+					}
+				}
+				// altrimenti il cliente associato al descrittore client_fd è stato servito
+				else {
+					FD_SET(client_fd, &set);
+					if (client_fd > fdmax)
+						fdmax = client_fd;
+				}
+			}
 			else {
 				// è stata ricevuta una richiesta da un cliente già connesso
 
@@ -383,14 +515,24 @@ int main(int argc, char *argv[]) {
 				if (client_fd == fdmax)
 					fdmax = get_max_fd(set, fdmax);
 
-				// TODO:
-				// servo richiesta
-				// una volta servita dovrò aggiungere fd al set
-				// oppure se il client si è disconnesso decrementare il numero di clienti
+				// inizializzo gli argomenti della funzione che sarà eseguita da un worker per servire la richiesta
+				task_args_t* args = NULL;
+				EQNULL_DO(malloc(sizeof(task_args_t)), args, EXTF);
+				args->client_fd = client_fd;
+				args->master_fd = workers_pipe[1];
+			
+				// aggiugo al threadpool la richiesta
+				EQM1_DO(threadpool_add(pool, task_handler, (void*)args), r, EXTF);
+				// controllo se il threadpool ha respinto il task
+				if (r == 1) {
+					// TODO: da gestire
+					free(args);
+				}
 			}
 		}
 	}
 	
+	threadpool_destroy(pool);
 	EQM1(unlink(config->socket_path), r);
 	NEQ0(pthread_join(sig_handler_thread, NULL), r);
 	NEQ0_DO(pthread_mutex_destroy(&sig_mutex), r, EXTF);
