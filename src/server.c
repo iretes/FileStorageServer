@@ -75,11 +75,11 @@ typedef struct task_args {
 } task_args_t;
 
 /**
- * @function 		task_handler()
- * @brief			Funzione eseguita dai worker thread per servire le richieste dei clienti
+ * @function           task_handler()
+ * @brief              Funzione eseguita dai worker thread per servire le richieste dei clienti
  * 
- * @param arg		Argomenti del task
- * @param worker_id Identificativo del worker thread che gestisce la richiesta
+ * @param arg          Argomenti del task
+ * @param worker_id    Identificativo del worker thread che gestisce la richiesta
  */
 static void task_handler(void *arg, int worker_id) {
 	task_args_t* task_arg = (task_args_t*)arg;
@@ -189,7 +189,7 @@ static void *sig_handler(void *arg) {
 		default: ; // non vengono ricevuti altri segnali
 	}	
 
-	return NULL;	   
+	return NULL;
 }
 
 /**
@@ -384,7 +384,7 @@ int main(int argc, char *argv[]) {
 	}
 	free(config_file);
 	config_file = NULL;
-		   
+
 	// stampo i valori di configurazione
 	printf("=========== VALORI DI CONFIGURAZIONE ===========\n");
 	printf("%s = %zu\n", N_WORKERS_STR, config->n_workers);
@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
 	printf("%s = %s\n", SOCKET_PATH_STR, config->socket_path);   
 	printf("%s = %s\n", LOG_FILE_STR, config->log_file_path);
 	printf("%s = %s\n", EVICTION_POLICY_STR, eviction_policy_to_str(config->eviction_policy));
-    
+
 	// set up del welcoming socket
 	int listenfd;
 	EQM1_DO(socket(AF_UNIX, SOCK_STREAM, 0), listenfd, EXTF);

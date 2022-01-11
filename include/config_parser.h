@@ -67,15 +67,15 @@
  * @var eviction_policy     Politica di espulsione
  */
 typedef struct config {
-    size_t n_workers;
-    size_t dim_workers_queue;
-    size_t max_file_num;
-    size_t max_bytes;
-    size_t max_locks;
-    size_t expected_clients;
-    char* socket_path;
-    char* log_file_path;
-    eviction_policy_t eviction_policy;
+	size_t n_workers;
+	size_t dim_workers_queue;
+	size_t max_file_num;
+	size_t max_bytes;
+	size_t max_locks;
+	size_t expected_clients;
+	char* socket_path;
+	char* log_file_path;
+	eviction_policy_t eviction_policy;
 } config_t;
 
 /**

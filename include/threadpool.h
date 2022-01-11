@@ -116,4 +116,3 @@ int threadpool_destroy(threadpool_t *pool);
 int threadpool_add(threadpool_t *pool, void (*f)(void *, int), void *arg);
 
 #endif /* THREADPOOL_H */
-

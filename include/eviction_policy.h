@@ -15,9 +15,9 @@
  * @var LFU     Politica least frequently used
  */
 typedef enum eviction_policy {
-    FIFO,
-    LRU,
-    LFU,
+	FIFO,
+	LRU,
+	LFU,
 } eviction_policy_t;
 
 /**

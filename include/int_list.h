@@ -17,7 +17,7 @@
  * @var list    Oggetto che rappresenta una linked list generica
  */
 typedef struct int_list {
-    list_t* list;
+	list_t* list;
 } int_list_t;
 
 /**
@@ -195,9 +195,9 @@ int_list_t* int_list_cpy(int_list_t* int_list);
  * @param d         Intero corrente
  */
 #define int_list_for_each(int_list, d) \
-    if (int_list != NULL && int_list->list != NULL) \
-    for (node_t* node = int_list->list->head; \
-         node != NULL && (node->data) != NULL && ((d=*(int*)node->data) >= 0 || (d=*(int*)node->data) < 0); \
-         node = node->next)
+	if (int_list != NULL && int_list->list != NULL) \
+	for (node_t* node = int_list->list->head; \
+		node != NULL && (node->data) != NULL && ((d=*(int*)node->data) >= 0 || (d=*(int*)node->data) < 0); \
+		node = node->next)
 
 #endif /* INT_LIST_H */

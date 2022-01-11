@@ -19,9 +19,9 @@
  * @var next    Puntatore alla entry successiva del bucket
  */
 typedef struct entry {
-    void* key;
-    void *value;
-    struct entry* next;
+	void* key;
+	void *value;
+	struct entry* next;
 } entry_t;
 
 /**
@@ -35,11 +35,11 @@ typedef struct entry {
  * @var hash_key_compare    Puntatore alla funzione per paragonare le chiavi delle entry
  */
 typedef struct hasht {
-    size_t nbuckets;
-    size_t nentries;
-    entry_t **buckets;
-    unsigned int (*hash_function)(void*);
-    int (*hash_key_compare)(void*, void*);
+	size_t nbuckets;
+	size_t nentries;
+	entry_t **buckets;
+	unsigned int (*hash_function)(void*);
+	int (*hash_key_compare)(void*, void*);
 } hasht_t;
 
 /**

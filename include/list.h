@@ -2,7 +2,7 @@
  * @file    list.h
  * @brief   Interfaccia della linked list.
  */
- 
+
 #ifndef LIST_H
 #define LIST_H
 
@@ -23,8 +23,8 @@
  * @var next    Puntatore al nodo successivo
  */
 typedef struct node {
-    void* data;
-    struct node* next;
+	void* data;
+	struct node* next;
 } node_t;
 
 /**
@@ -38,11 +38,11 @@ typedef struct node {
  * @var free_data   Puntatore alla funzione per deallocare i dati nei nodi
  */
 typedef struct list {
-    node_t* head;
-    node_t* tail;
-    size_t len;
-    int (*compare)(void*, void*);
-    void (*free_data)(void*);
+	node_t* head;
+	node_t* tail;
+	size_t len;
+	int (*compare)(void*, void*);
+	void (*free_data)(void*);
 } list_t;
 
 /**
@@ -220,9 +220,9 @@ int list_reverse(list_t* list);
  * @param d     Dato corrente
  */
 #define list_for_each(list, d) \
-    if (list != NULL) \
-    for (node_t* node = list->head; \
-         node != NULL && (d = node->data) != NULL; \
-         node = node->next)
+	if (list != NULL) \
+	for (node_t* node = list->head; \
+		node != NULL && (d = node->data) != NULL; \
+		node = node->next)
 
 #endif /* LIST_H */
