@@ -17,6 +17,8 @@
 #include <protocol.h>
 #include <util.h>
 #include <threadpool.h>
+#include <logger.h>
+#include <log_format.h>
 
 /**
  * Numero massimo di connessioni in sospeso nella coda di ascolto del socket
@@ -29,6 +31,16 @@
  * Massima dimensione del path del socket file
  */
 #define UNIX_PATH_MAX 108
+
+/**
+ * @def      LOG()
+ * @brief    Controlla il valore di ritorno di una chiamata di log_record()
+ */
+#define LOG(X) { \
+    if (X == -1) { \
+        fprintf(stderr, "Non è stato possibile scrivere sul file di log\n"); \
+    } \
+}
 
 void open_file_handler(int master_fd, int client_fd, int worker_id, request_code_t code) {
 
@@ -416,6 +428,10 @@ int main(int argc, char *argv[]) {
 	int workers_pipe[2];
 	EQM1_DO(pipe(workers_pipe), r, EXTF);
 
+	// creo l'oggetto logger
+	logger_t* logger;
+	EQNULL_DO(logger_create(config->log_file_path, INIT_LINE), logger, EXTF);
+
 	// maschere per la gestione del selettore
 	fd_set set, tmpset;
 	FD_ZERO(&set);
@@ -446,8 +462,11 @@ int main(int argc, char *argv[]) {
 		EQM1_DO(select(fdmax + 1, &tmpset, NULL, NULL, NULL), r, EXTF);
 		
 		for (int i = 0; i <= fdmax; i ++) {
-			if (is_flag_setted(sig_mutex, shut_down_now))
+			if (is_flag_setted(sig_mutex, shut_down_now)) {
+				LOG(log_record(logger, "%d,%s,%s", 
+					MASTER_ID, SHUT_DOWN_NOW, OK));
 				break;
+			}
 
 			if (!FD_ISSET(i, &tmpset))
 				continue;
@@ -455,8 +474,11 @@ int main(int argc, char *argv[]) {
 			int client_fd;
 			if (i == listenfd) {
 				// è giunta una nuova richiesta di connessione
-				if (is_flag_setted(sig_mutex, shut_down_now))
+				if (is_flag_setted(sig_mutex, shut_down_now)) {
+					LOG(log_record(logger, "%d,%s,%s", 
+						MASTER_ID, SHUT_DOWN_NOW, OK));
 					break;
+				}
 				if (is_flag_setted(sig_mutex, shut_down))
 					continue;
 				
@@ -466,11 +488,21 @@ int main(int argc, char *argv[]) {
 					fdmax = client_fd;
 
 				connected_clients++;
+
+				LOG(log_record(logger, "%d,%s,%s,%d,,,,,%d",
+					MASTER_ID, NEW_CONNECTION, OK, client_fd, connected_clients));
 			}
 			else if (i == signal_pipe[0]) {
 				// il thread destinato alla ricezione di segnali ha scritto nella pipe
-				if (is_flag_setted(sig_mutex, shut_down_now))
+				if (is_flag_setted(sig_mutex, shut_down_now)) {
+					LOG(log_record(logger, "%d,%s,%s", 
+						MASTER_ID, SHUT_DOWN_NOW, OK));
 					break;
+				}
+				else {
+					LOG(log_record(logger, "%d,%s,%s", 
+						MASTER_ID, SHUT_DOWN, OK));
+				}
 
 				FD_CLR(signal_pipe[0], &set);
 				if (signal_pipe[0] == fdmax)
@@ -491,6 +523,8 @@ int main(int argc, char *argv[]) {
 				// se negativo significa che il cliente associato al descrittore -(client_fd) si è disconnesso
 				if (client_fd < 0) {
 					connected_clients --;
+					LOG(log_record(logger, "%d,%s,%s,%d,,,,,%d",
+						MASTER_ID, CLOSED_CONNECTION, OK, (-client_fd), connected_clients));
 					// se è stato ricevuto il segnale SIGHUP e non ci sono più clienti connessi posso terminare
 					if (is_flag_setted(sig_mutex, shut_down) && connected_clients == 0) {
 						set_flag(sig_mutex, &shut_down_now);
@@ -507,8 +541,11 @@ int main(int argc, char *argv[]) {
 			else {
 				// è stata ricevuta una richiesta da un cliente già connesso
 
-				if (is_flag_setted(sig_mutex, shut_down_now))
+				if (is_flag_setted(sig_mutex, shut_down_now)) {
+					LOG(log_record(logger, "%d,%s,%s", 
+						MASTER_ID, SHUT_DOWN_NOW, OK));
 					break;
+				}
 				
 				client_fd = i; 
 				FD_CLR(client_fd, &set); 
@@ -537,6 +574,7 @@ int main(int argc, char *argv[]) {
 	NEQ0(pthread_join(sig_handler_thread, NULL), r);
 	NEQ0_DO(pthread_mutex_destroy(&sig_mutex), r, EXTF);
 
+	logger_destroy(logger);
 	free(config->socket_path);
 	free(config->log_file_path);
 	free(config);
