@@ -19,6 +19,7 @@
 #include <threadpool.h>
 #include <logger.h>
 #include <log_format.h>
+#include <storage_server.h>
 
 /**
  * Numero massimo di connessioni in sospeso nella coda di ascolto del socket
@@ -31,48 +32,6 @@
  * Massima dimensione del path del socket file
  */
 #define UNIX_PATH_MAX 108
-
-/**
- * @def      LOG()
- * @brief    Controlla il valore di ritorno di una chiamata di log_record()
- */
-#define LOG(X) { \
-    if (X == -1) { \
-        fprintf(stderr, "Non è stato possibile scrivere sul file di log\n"); \
-    } \
-}
-
-void open_file_handler(int master_fd, int client_fd, int worker_id, request_code_t code) {
-
-}
-
-void write_file_handler(int master_fd, int client_fd, int worker_id, request_code_t code) {
-
-}
-
-void read_file_handler(int master_fd, int client_fd, int worker_id) {
-
-}
-
-void readn_file_handler(int master_fd, int client_fd, int worker_id) {
-
-}
-
-void lock_file_handler(int master_fd, int client_fd, int worker_id) {
-
-}
-
-void unlock_file_handler(int master_fd, int client_fd, int worker_id) {
-
-}
-
-void remove_file_handler(int master_fd, int client_fd, int worker_id) {
-
-}
-
-void close_file_handler(int master_fd, int client_fd, int worker_id) {
-
-}
 
 /**
  * @struct task_args_t

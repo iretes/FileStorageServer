@@ -20,7 +20,8 @@ all: $(TARGETS)
 
 CLIENTOBJS = $(OBJDIR)/client.o 
 SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o \
-$(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o $(OBJDIR)/threadpool.o $(OBJDIR)/logger.o
+$(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o $(OBJDIR)/threadpool.o $(OBJDIR)/logger.o \
+$(OBJDIR)/storage_server.o
 
 $(BINDIR)/client: $(CLIENTOBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBSYS)
@@ -33,7 +34,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 
 $(OBJDIR)/server.o: $(SRCDIR)/server.c $(INCDIR)/hasht.h $(INCDIR)/conc_hasht.h $(INCDIR)/list.h $(INCDIR)/int_list.h \
 $(INCDIR)/eviction_policy.h $(INCDIR)/config_parser.h $(INCDIR)/util.h $(INCDIR)/protocol.h $(INCDIR)/threadpool.h \
-$(INCDIR)/logger.h $(INCDIR)/log_format.h
+$(INCDIR)/logger.h $(INCDIR)/log_format.h $(INCDIR)/storage_server.h
 
 $(OBJDIR)/client.o: $(SRCDIR)/client.c
 
@@ -55,6 +56,8 @@ $(INCDIR)/eviction_policy.h $(INCDIR)/util.h
 $(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h $(INCDIR)/util.h
 
 $(OBJDIR)/logger.o: $(SRCDIR)/logger.c $(INCDIR)/util.h $(INCDIR)/logger.h
+
+$(OBJDIR)/storage_server.o: $(SRCDIR)/storage_server.c $(INCDIR)/storage_server.h
 
 clean: 
 	@rm -f $(TARGETS)
