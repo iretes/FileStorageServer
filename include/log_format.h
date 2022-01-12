@@ -19,7 +19,5 @@
 #define SHUT_DOWN "SHUT_DOWN"
 /* Stringa che indica l'avvenuta ricezione del segnale SIGINT o SIGQUIT */
 #define SHUT_DOWN_NOW "SHUT_DOWN_NOW"
-/* Stringa che indica l'esito positivo dell'operazione */
-#define OK "OK"
 
 #endif /* LOG_FORMAT_H */

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -std=c99 -Wall -Werror -g -D_POSIX_C_SOURCE=2001012L
+CFLAGS += -std=c99 -g -D_POSIX_C_SOURCE=2001012L # -Wall -Werror 
 SHELL = /bin/bash
 LIBSYS = -L. -lpthread
 
@@ -21,7 +21,7 @@ all: $(TARGETS)
 CLIENTOBJS = $(OBJDIR)/client.o 
 SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o \
 $(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o $(OBJDIR)/threadpool.o $(OBJDIR)/logger.o \
-$(OBJDIR)/storage_server.o
+$(OBJDIR)/storage_server.o $(OBJDIR)/protocol.o
 
 $(BINDIR)/client: $(CLIENTOBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBSYS)
@@ -58,6 +58,8 @@ $(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h $(INCDIR)/
 $(OBJDIR)/logger.o: $(SRCDIR)/logger.c $(INCDIR)/util.h $(INCDIR)/logger.h
 
 $(OBJDIR)/storage_server.o: $(SRCDIR)/storage_server.c $(INCDIR)/storage_server.h
+
+$(OBJDIR)/protocol.o: $(SRCDIR)/protocol.c $(INCDIR)/protocol.h
 
 clean: 
 	@rm -f $(TARGETS)

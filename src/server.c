@@ -425,8 +425,8 @@ int main(int argc, char *argv[]) {
 		
 		for (int i = 0; i <= fdmax; i ++) {
 			if (is_flag_setted(sig_mutex, shut_down_now)) {
-				LOG(log_record(logger, "%d,%s,%s", 
-					MASTER_ID, SHUT_DOWN_NOW, OK));
+				LOG(log_record(logger, "%d,%s", 
+					MASTER_ID, SHUT_DOWN_NOW));
 				break;
 			}
 
@@ -437,8 +437,8 @@ int main(int argc, char *argv[]) {
 			if (i == listenfd) {
 				// è giunta una nuova richiesta di connessione
 				if (is_flag_setted(sig_mutex, shut_down_now)) {
-					LOG(log_record(logger, "%d,%s,%s", 
-						MASTER_ID, SHUT_DOWN_NOW, OK));
+					LOG(log_record(logger, "%d,%s", 
+						MASTER_ID, SHUT_DOWN_NOW));
 					break;
 				}
 				if (is_flag_setted(sig_mutex, shut_down))
@@ -453,19 +453,19 @@ int main(int argc, char *argv[]) {
 
 				connected_clients++;
 
-				LOG(log_record(logger, "%d,%s,%s,%d,,,,,%d",
-					MASTER_ID, NEW_CONNECTION, OK, client_fd, connected_clients));
+				LOG(log_record(logger, "%d,%s,,%d,,,,,%d",
+					MASTER_ID, NEW_CONNECTION, client_fd, connected_clients));
 			}
 			else if (i == signal_pipe[0]) {
 				// il thread destinato alla ricezione di segnali ha scritto nella pipe
 				if (is_flag_setted(sig_mutex, shut_down_now)) {
-					LOG(log_record(logger, "%d,%s,%s", 
-						MASTER_ID, SHUT_DOWN_NOW, OK));
+					LOG(log_record(logger, "%d,%s", 
+						MASTER_ID, SHUT_DOWN_NOW));
 					break;
 				}
 				else {
-					LOG(log_record(logger, "%d,%s,%s", 
-						MASTER_ID, SHUT_DOWN, OK));
+					LOG(log_record(logger, "%d,%s", 
+						MASTER_ID, SHUT_DOWN));
 				}
 
 				FD_CLR(signal_pipe[0], &set);
@@ -487,8 +487,8 @@ int main(int argc, char *argv[]) {
 				// se negativo significa che il cliente associato al descrittore -(client_fd) si è disconnesso
 				if (client_fd < 0) {
 					connected_clients --;
-					LOG(log_record(logger, "%d,%s,%s,%d,,,,,%d",
-						MASTER_ID, CLOSED_CONNECTION, OK, (-client_fd), connected_clients));
+					LOG(log_record(logger, "%d,%s,,%d,,,,,%d",
+						MASTER_ID, CLOSED_CONNECTION, (-client_fd), connected_clients));
 					// se è stato ricevuto il segnale SIGHUP e non ci sono più clienti connessi posso terminare
 					if (is_flag_setted(sig_mutex, shut_down) && connected_clients == 0) {
 						set_flag(sig_mutex, &shut_down_now);
@@ -506,8 +506,8 @@ int main(int argc, char *argv[]) {
 				// è stata ricevuta una richiesta da un cliente già connesso
 
 				if (is_flag_setted(sig_mutex, shut_down_now)) {
-					LOG(log_record(logger, "%d,%s,%s", 
-						MASTER_ID, SHUT_DOWN_NOW, OK));
+					LOG(log_record(logger, "%d,%s", 
+						MASTER_ID, SHUT_DOWN_NOW));
 					break;
 				}
 				

@@ -24,6 +24,24 @@
 typedef struct storage storage_t;
 
 /**
+ * @struct              request_t
+ * @brief               Struttura che raccoglie gli argomenti di una richiesta
+ * 
+ * @var code            Codice della richiesta
+ * @var file_path       Path del file
+ * @var content_size    Size del contenuto del file
+ * @var content         Contenuto del file
+ * @var n               Valore dell'argomento n
+ */
+typedef struct request {
+	request_code_t code;
+	char* file_path;
+	size_t content_size;
+	void* content;
+	int n;
+} request_t;
+
+/**
  * @function        create_storage()
  * @brief           Inizializza la struttura che rappresenta lo storage e ritorna un puntatore ad essa. 
  *                  Inizializza i campi con i valori iniziali o con i valori dei parametri di configurazione.
@@ -62,6 +80,24 @@ void destroy_storage(storage_t* storage);
  *                     EALREADY se client_fd è il descrittore di un cliente già connesso
  */
 int new_connection_handler(storage_t* storage, int client_fd);
+
+/**
+ * @function           read_request()
+ * @brief              Legge la richiesta del cliente associato al descrittore client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del cliente che ha effettuato la richiesta
+ * @param worker_id    Identificativo del worker che gestisce la richiesta
+ * 
+ * @return             Un puntatore a una struttura request_t che raccoglie gli argomenti della richiesta in caso di 
+ *                     successo, NULL in caso di fallimento con errno settato ad indicare l'errore.
+ *                     In caso di fallimento errno può assumere i seguenti valori:
+ *                     EINVAL se storage è @c NULL o client_fd è negativo
+ *                     ECOMM se la richiesta ricevuta dal cliente non rispetta il protocollo o è stato riscontrato 
+ *                     che il cliente si è disconesso
+ */
+request_t* read_request(storage_t* storage, int master_fd, int client_fd, int worker_id);
 
 void open_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code);
 
