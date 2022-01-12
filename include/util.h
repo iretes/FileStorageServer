@@ -364,6 +364,17 @@
 		} \
 	} while(0);
 
+/**
+ * @function    int_cmp()
+ * @brief       Confronta due interi.
+ * 
+ * @param a     primo elemento da confrontare
+ * @param b     secondo elemento da confrontare
+ *
+ * @return      1 se gli interi sono uguali, 0 altrimenti.
+ */
+int int_cmp(void* a, void* b);
+
 /** 
  * @function      readn()
  * @brief         Evita letture parziali.

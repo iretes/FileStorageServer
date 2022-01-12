@@ -6,6 +6,10 @@
 
 #include <util.h>
 
+int int_cmp(void* a, void* b) {
+    return ((*(int*)a - *(int*)b) == 0);
+}
+
 int readn(long fd, void *buf, size_t size) {
     size_t left = size;
     int r;

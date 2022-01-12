@@ -8,10 +8,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include <list.h>
-#include <int_list.h>
-#include <hasht.h>
-#include <conc_hasht.h>
 #include <config_parser.h>
 #include <eviction_policy.h>
 #include <protocol.h>
@@ -34,13 +30,15 @@
 #define UNIX_PATH_MAX 108
 
 /**
- * @struct task_args_t
- * @brief Struttura che raccoglie gli argomenti di un task che un worker dovrà servire
+ * @struct           task_args_t
+ * @brief            Struttura che raccoglie gli argomenti di un task che un worker dovrà servire
  * 
- * @var master_fd Descrittore per la comunicazione con il master
- * @var client_fd Descrittore del client che ha effettuato la richiesta
+ * @var storage      Struttura storage
+ * @var master_fd    Descrittore per la comunicazione con il master
+ * @var client_fd    Descrittore del client che ha effettuato la richiesta
  */
 typedef struct task_args {
+	storage_t* storage;
 	int master_fd;
 	int client_fd;
 } task_args_t;
@@ -55,6 +53,7 @@ typedef struct task_args {
 static void task_handler(void *arg, int worker_id) {
 	task_args_t* task_arg = (task_args_t*)arg;
 
+	storage_t* storage = task_arg->storage;
 	int master_fd = task_arg->master_fd;
 	int client_fd = task_arg->client_fd;
 
@@ -71,29 +70,29 @@ static void task_handler(void *arg, int worker_id) {
 		case OPEN_CREATE:
 		case OPEN_LOCK:
 		case OPEN_CREATE_LOCK:
-			open_file_handler(master_fd, client_fd, worker_id, code);
+			open_file_handler(storage, master_fd, client_fd, worker_id, code);
 			break;
 		case WRITE:
 		case APPEND:
-			write_file_handler(master_fd, client_fd, worker_id, code);
+			write_file_handler(storage, master_fd, client_fd, worker_id, code);
 			break;
 		case READ:
-			read_file_handler(master_fd, client_fd, worker_id);
+			read_file_handler(storage, master_fd, client_fd, worker_id);
 			break;
 		case READN:
-			readn_file_handler(master_fd, client_fd, worker_id);
+			readn_file_handler(storage, master_fd, client_fd, worker_id);
 			break;
 		case LOCK:
-			lock_file_handler(master_fd, client_fd, worker_id);
+			lock_file_handler(storage, master_fd, client_fd, worker_id);
 			break;
 		case UNLOCK:
-			unlock_file_handler(master_fd, client_fd, worker_id);
+			unlock_file_handler(storage, master_fd, client_fd, worker_id);
 			break;
 		case REMOVE:
-			remove_file_handler(master_fd, client_fd, worker_id);
+			remove_file_handler(storage, master_fd, client_fd, worker_id);
 			break;
 		case CLOSE:
-			close_file_handler(master_fd, client_fd, worker_id);
+			close_file_handler(storage, master_fd, client_fd, worker_id);
 			break;
 		default: ;
 	}
@@ -391,6 +390,10 @@ int main(int argc, char *argv[]) {
 	logger_t* logger;
 	EQNULL_DO(logger_create(config->log_file_path, INIT_LINE), logger, EXTF);
 
+	// creo l'oggetto storage
+	storage_t* storage = NULL;
+	EQNULL_DO(create_storage(config, logger), storage, EXTF);
+
 	// maschere per la gestione del selettore
 	fd_set set, tmpset;
 	FD_ZERO(&set);
@@ -514,8 +517,9 @@ int main(int argc, char *argv[]) {
 				// inizializzo gli argomenti della funzione che sarà eseguita da un worker per servire la richiesta
 				task_args_t* args = NULL;
 				EQNULL_DO(malloc(sizeof(task_args_t)), args, EXTF);
-				args->client_fd = client_fd;
+				args->storage = storage;
 				args->master_fd = workers_pipe[1];
+				args->client_fd = client_fd;
 			
 				// aggiugo al threadpool la richiesta
 				EQM1_DO(threadpool_add(pool, task_handler, (void*)args), r, EXTF);
@@ -533,6 +537,7 @@ int main(int argc, char *argv[]) {
 	NEQ0(pthread_join(sig_handler_thread, NULL), r);
 	NEQ0_DO(pthread_mutex_destroy(&sig_mutex), r, EXTF);
 
+	destroy_storage(storage);
 	logger_destroy(logger);
 	free(config->socket_path);
 	free(config->log_file_path);
