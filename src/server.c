@@ -449,6 +449,8 @@ int main(int argc, char *argv[]) {
 				if (client_fd > fdmax)
 					fdmax = client_fd;
 
+				EQM1_DO(new_connection_handler(storage, client_fd), r, EXTF);
+
 				connected_clients++;
 
 				LOG(log_record(logger, "%d,%s,%s,%d,,,,,%d",

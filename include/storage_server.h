@@ -49,6 +49,20 @@ storage_t* create_storage(config_t* config, logger_t* logger);
  */
 void destroy_storage(storage_t* storage);
 
+/**
+ * @function           new_connection_handler()
+ * @brief              Registra nello storage il nuovo cliente connesso.
+ * 
+ * @param storage      Struttura storage
+ * @param client_fd    Descrittore del nuovo client connesso
+ * 
+ * @return             0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                     In caso di fallimento errno può assumere i seguenti valori:
+ *                     EINVAL se storage è @c NULL o client_fd è negativo
+ *                     EALREADY se client_fd è il descrittore di un cliente già connesso
+ */
+int new_connection_handler(storage_t* storage, int client_fd);
+
 void open_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code);
 
 void write_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code);

@@ -310,6 +310,31 @@ void destroy_storage(storage_t* storage) {
 	storage = NULL;
 }
 
+int new_connection_handler(storage_t* storage, int client_fd) {
+	if (storage == NULL || client_fd < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	int r;
+	// creo un oggetto cliente
+	client_t* client = NULL;
+	EQNULL_DO(init_client(client_fd), client, EXTF);
+
+	// aggiungo il client alla tabella hash di clienti connessi se non è già presente
+	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
+	EQM1_DO(conc_hasht_contains(storage->connected_clients, &client_fd), r, EXTF);
+	if (r) {
+		EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
+		errno = EALREADY;
+		return -1;
+	}
+	EQM1_DO(conc_hasht_insert(storage->connected_clients, &client->fd, client), r, EXTF);
+	EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
+
+	return 0;
+}
+
 void open_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code) {
 
 }
