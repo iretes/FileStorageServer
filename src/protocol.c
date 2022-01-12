@@ -45,6 +45,8 @@ char* resp_code_to_str(response_code_t code) {
 			return "TOO_LONG_CONTENT";
 		case INVALID_PATH:
 			return "INVALID_PATH";
+		case TEMPORARILY_UNAVAILABLE:
+			return "TEMPORARILY_UNAVAILABLE";
 		default: 
 			return NULL;
 	}

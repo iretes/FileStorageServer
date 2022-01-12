@@ -527,7 +527,13 @@ int main(int argc, char *argv[]) {
 				EQM1_DO(threadpool_add(pool, task_handler, (void*)args), r, EXTF);
 				// controllo se il threadpool ha respinto il task
 				if (r == 1) {
-					// TODO: da gestire
+					// il threadpool ha rifiutato il task
+					if (rejected_task_handler(storage, workers_pipe[1], client_fd) == 0) {
+						// se il client non si è disconnesso aggiungo il suo descrittore al set
+						FD_SET(client_fd, &set);
+						if (client_fd > fdmax)
+							fdmax = client_fd;
+					}
 					free(args);
 				}
 			}

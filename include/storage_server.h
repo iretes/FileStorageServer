@@ -99,6 +99,18 @@ int new_connection_handler(storage_t* storage, int client_fd);
  */
 request_t* read_request(storage_t* storage, int master_fd, int client_fd, int worker_id);
 
+/**
+ * @function           rejected_task_handler()
+ * @brief              Gestisce un task rifiutato dal threadpool.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha richiesto il task
+ * 
+ * @return             1 se il client si è disconnesso, 0 altrimenti.
+ */
+int rejected_task_handler(storage_t* storage, int master_fd, int client_fd);
+
 void open_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code);
 
 void write_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code);

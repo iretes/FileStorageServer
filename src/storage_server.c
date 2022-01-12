@@ -16,6 +16,8 @@
 #include <conc_hasht.h>
 #include <eviction_policy.h>
 #include <util.h>
+#include <logger.h>
+#include <log_format.h>
 
 /**
  * @struct                   storage_t
@@ -554,6 +556,37 @@ request_t* read_request(storage_t* storage, int master_fd, int client_fd, int wo
 	}
 
 	return req;
+}
+
+int rejected_task_handler(storage_t* storage, int master_fd, int client_fd) {
+	// flag che indica se il client si è disconnesso
+	int disconnected = 0;
+	// leggo la richiesta del client
+	request_t* req = read_request(storage, master_fd, client_fd, MASTER_ID);
+	if (req == NULL) {
+		disconnected = 1;
+		return disconnected;
+	}
+
+	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+		MASTER_ID, 
+		req_code_to_str(req->code), 
+		resp_code_to_str(TEMPORARILY_UNAVAILABLE), 
+		client_fd, req->file_path, 
+		0));
+
+	// rispondo al cliente comunicando che il server è momentaneamente non disponibile
+	if (send_response_code(client_fd, TEMPORARILY_UNAVAILABLE) == -1) {
+		close_client_connection(storage, master_fd, client_fd, MASTER_ID);
+		disconnected = 1;
+	}
+	if (req->file_path)
+		free(req->file_path);
+	if (req->content)
+		free(req->content);
+	free(req);
+
+	return disconnected;
 }
 
 void open_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code) {
