@@ -57,47 +57,101 @@ static void task_handler(void *arg, int worker_id) {
 	int master_fd = task_arg->master_fd;
 	int client_fd = task_arg->client_fd;
 
-	int r, neg_fd = -client_fd;
-	request_code_t code;
-	r = readn(client_fd, &code, sizeof(request_code_t));
-	if (r == -1 || r == 0) {
+	// leggo la richiesta del cliente
+	request_t* req = read_request(storage, master_fd, client_fd, worker_id);
+	if (req == NULL) {
 		free(arg);
-		writen(master_fd, &neg_fd, sizeof(int)); // da testare
+		return;
 	}
+
+	int r;
+
 	// servo la richiesta
-	switch (code) {
+	switch (req->code) {
 		case OPEN_NO_FLAGS:
 		case OPEN_CREATE:
 		case OPEN_LOCK:
 		case OPEN_CREATE_LOCK:
-			open_file_handler(storage, master_fd, client_fd, worker_id, code);
+			EQM1_DO(open_file_handler(
+						storage, 
+						master_fd, 
+						client_fd, 
+						worker_id, 
+						req->file_path, 
+						req->code),
+					r, EXTF);
 			break;
 		case WRITE:
 		case APPEND:
-			write_file_handler(storage, master_fd, client_fd, worker_id, code);
+			EQM1_DO(write_file_handler(
+						storage, 
+						master_fd, 
+						client_fd, 
+						worker_id, 
+						req->file_path, 
+						req->content, 
+						req->content_size, 
+						req->code),
+					r, EXTF);
 			break;
 		case READ:
-			read_file_handler(storage, master_fd, client_fd, worker_id);
+			EQM1_DO(read_file_handler(
+						storage,
+						master_fd,
+						client_fd,
+						worker_id, 
+						req->file_path),
+					r, EXTF);
 			break;
 		case READN:
-			readn_file_handler(storage, master_fd, client_fd, worker_id);
+			EQM1_DO(readn_file_handler(
+						storage,
+						master_fd,
+						client_fd,
+						worker_id,
+						req->n),
+					r, EXTF);
 			break;
 		case LOCK:
-			lock_file_handler(storage, master_fd, client_fd, worker_id);
+			EQM1_DO(lock_file_handler(
+						storage,
+						master_fd,
+						client_fd,
+						worker_id,
+						req->file_path),
+					r, EXTF);
 			break;
 		case UNLOCK:
-			unlock_file_handler(storage, master_fd, client_fd, worker_id);
+			EQM1_DO(unlock_file_handler(
+						storage,
+						master_fd,
+						client_fd,
+						worker_id,
+						req->file_path),
+					r, EXTF);
 			break;
 		case REMOVE:
-			remove_file_handler(storage, master_fd, client_fd, worker_id);
+			EQM1_DO(remove_file_handler(
+						storage,
+						master_fd,
+						client_fd,
+						worker_id,
+						req->file_path),
+					r, EXTF);
 			break;
 		case CLOSE:
-			close_file_handler(storage, master_fd, client_fd, worker_id);
+			EQM1_DO(close_file_handler(
+						storage,
+						master_fd,
+						client_fd,
+						worker_id,
+						req->file_path),
+					r, EXTF);
 			break;
 		default: ;
 	}
 	free(arg);
-	writen(master_fd, &client_fd, sizeof(int)); // da testare
+	free(req);
 }
 
 /**

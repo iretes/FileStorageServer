@@ -109,22 +109,60 @@ request_t* read_request(storage_t* storage, int master_fd, int client_fd, int wo
  * 
  * @return             1 se il client si è disconnesso, 0 altrimenti.
  */
-int rejected_task_handler(storage_t* storage, int master_fd, int client_fd);
+int rejected_task_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd);
 
-void open_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code);
+int open_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						char* file_path, 
+						request_code_t mode);
 
-void write_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id, request_code_t code);
+int write_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						char* file_path, 
+						void* content, 
+						size_t content_size, 
+						request_code_t mode);
 
-void read_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id);
+int read_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						char* file_path);
 
-void readn_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id);
+int readn_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						int n);
 
-void lock_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id);
+int lock_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						char* file_path);
 
-void unlock_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id);
+int unlock_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						char* file_path);
 
-void remove_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id);
+int remove_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						char* file_path);
 
-void close_file_handler(storage_t* storage, int master_fd, int client_fd, int worker_id);
+int close_file_handler(storage_t* storage, 
+						int master_fd, 
+						int client_fd, 
+						int worker_id, 
+						char* file_path);
 
 #endif /* STORAGE_SERVER_H */
