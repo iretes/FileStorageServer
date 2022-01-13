@@ -45,6 +45,12 @@ char* resp_code_to_str(response_code_t code) {
 			return "TOO_LONG_CONTENT";
 		case INVALID_PATH:
 			return "INVALID_PATH";
+		case FILE_NOT_EXISTS:
+			return "FILE_NOT_EXISTS";
+		case FILE_ALREADY_EXISTS:
+			return "FILE_ALREADY_EXISTS";
+		case FILE_ALREADY_OPEN:
+			return "FILE_ALREADY_OPEN";
 		case TEMPORARILY_UNAVAILABLE:
 			return "TEMPORARILY_UNAVAILABLE";
 		default: 

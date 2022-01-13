@@ -391,6 +391,7 @@ int new_connection_handler(storage_t* storage, int client_fd) {
 	return 0;
 }
 
+// TODO: chiudi file aperti e rilascia lock
 static void close_client_connection(storage_t* storage, int master_fd, int client_fd, int worker_id) {
 	int r;
 
@@ -588,6 +589,146 @@ int open_file_handler(storage_t* storage,
 						int worker_id, 
 						char* file_path, 
 						request_code_t mode) {
+	if (storage == NULL || master_fd < 0 || client_fd < 0 || file_path == NULL || strlen(file_path) == 0 ||
+		(mode != OPEN_NO_FLAGS && mode != OPEN_CREATE && mode != OPEN_LOCK && mode != OPEN_CREATE_LOCK))
+		return -1;
+	
+	int r;
+
+	file_t* file = NULL;
+
+	// controllo se la modalità di apertura del file prevede la creazione del file
+	if (mode == OPEN_CREATE || mode == OPEN_CREATE_LOCK) {
+		NEQ0_DO(pthread_mutex_lock(&storage->mutex), r, EXTF);
+		
+		// recupero il file
+		EQM1_DO(conc_hasht_lock(storage->files_ht, file_path), r, EXTF);
+		ERRNOSET_DO(conc_hasht_get_value(storage->files_ht, file_path), file, EXTF);
+
+		// controllo se il file esiste
+		if (file != NULL) {
+			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+			NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+				worker_id, req_code_to_str(mode), resp_code_to_str(FILE_ALREADY_EXISTS), client_fd, file_path, 0));
+			/* rispondo al cliente che il file già esiste e comunico al master di aver servito il cliente
+			   (in caso di errore chiudo la connessione del cliente) */
+			if (send_response_code(client_fd, FILE_ALREADY_EXISTS) == -1)
+				close_client_connection(storage, master_fd, client_fd, worker_id);
+			else
+				EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+			free(file_path);
+			return 0;
+		}
+
+		if (storage->curr_file_num == storage->max_files) {
+			// TODO: espulsione del file
+		}
+
+		// creo un file e lo aggiungo allo storage
+		EQNULL_DO(init_file(file_path), file, EXTF);
+		EQM1_DO(conc_hasht_insert(storage->files_ht, file_path, file), r, EXTF);
+		EQM1_DO(list_tail_insert(storage->files_queue, file), r, EXTF);
+		
+		if (mode == OPEN_CREATE_LOCK)
+			file->can_write_fd = client_fd;
+
+		(storage->curr_file_num) ++;
+
+		if (storage->curr_file_num > storage->max_files_stored)
+			storage->max_files_stored = storage->curr_file_num;
+		
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d,%zu", 
+			worker_id, req_code_to_str(mode), resp_code_to_str(OK), client_fd, file_path, 0, storage->curr_file_num));
+
+		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+	}
+	else { // non è stata richiesta l'opzione CREATE
+
+		// recupero il file
+		EQM1_DO(conc_hasht_lock(storage->files_ht, file_path), r, EXTF);
+		ERRNOSET_DO(conc_hasht_get_value(storage->files_ht, file_path), file, EXTF);
+
+		if (file == NULL) {
+			// il non file esiste
+			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+				worker_id, req_code_to_str(mode), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
+			/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
+			   (in caso di errore chiudo la connessione del cliente) */
+			if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
+				close_client_connection(storage, master_fd, client_fd, worker_id);
+			else
+				EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+			free(file_path);
+			return 0;
+		}
+
+		// controllo se il file è già stato aperto
+		EQM1_DO(int_list_contains(file->open_by_fds, client_fd), r, EXTF);
+		if (r == 1) {
+			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+				worker_id, req_code_to_str(mode), resp_code_to_str(FILE_ALREADY_OPEN), client_fd, file_path, 0));
+			/* rispondo al cliente che il file è già stato aperto e comunico al master di aver servito il cliente
+			   (in caso di errore chiudo la connessione del cliente) */
+			if (send_response_code(client_fd, FILE_ALREADY_OPEN) == -1)
+				close_client_connection(storage, master_fd, client_fd, worker_id);
+			else
+				EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+			free(file_path);
+			return 0;
+		}
+	}
+
+	// inserisco il cliente tra coloro che hanno aperto il file
+	EQM1_DO(int_list_tail_insert(file->open_by_fds, client_fd), r, EXTF);
+
+	// recupero l'oggetto relativo al cliente richiedente
+	client_t* client;
+	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
+	EQNULL_DO(conc_hasht_get_value(storage->connected_clients, &client_fd), client, EXTF);
+
+	// inserisco il file tra quelli aperti dal cliente
+	EQM1_DO(list_tail_insert(client->opened_files, file), r, EXTF);
+
+	// controllo se la modalità di apertura del file prevede la lock
+	if (mode == OPEN_LOCK || mode == OPEN_CREATE_LOCK) {
+		if (file->locked_by_fd == -1) {
+			// il file non è bloccato
+			file->locked_by_fd = client_fd;
+			EQM1_DO(list_tail_insert(client->locked_files, file), r, EXTF);
+		}
+		else {
+			// il file è già bloccato, inserisco il cliente che ha fatto richiesta nella lista di attesa
+			EQM1_DO(int_list_tail_insert(file->pending_lock_fds, client_fd), r, EXTF);
+			EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
+			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+				worker_id, req_code_to_str(mode), CLIENT_IS_WAITING, client_fd, file_path, 0));
+			free(file_path);
+			return 0;
+		}
+	}
+
+	EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
+	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+
+	if (mode == OPEN_LOCK || mode == OPEN_NO_FLAGS) { // in caso di CREATE il logging è già stato effettuato
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+			worker_id, req_code_to_str(mode), resp_code_to_str(OK), client_fd, file_path, 0));
+	}
+
+	/* invio l'esito positivo al cliente e comunico al master di aver servito il cliente
+	   (in caso di errore chiudo la connessione del cliente) */
+	if (send_response_code(client_fd, OK) == -1)
+		close_client_connection(storage, master_fd, client_fd, worker_id);
+	else
+		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+
+	if (mode == OPEN_NO_FLAGS || mode == OPEN_LOCK) // in caso di create file_path è riferito nello storage
+		free(file_path);
+
 	return 0;
 }
 

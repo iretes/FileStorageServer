@@ -15,6 +15,8 @@
 #define NEW_CONNECTION "NEW_CONNECTION"
 /* Stringa che indica la disconnessione di un client */
 #define CLOSED_CONNECTION "CLOSED_CONNECTION"
+/* Stringa che indica che l'operazione richiesta dal client è stata sospesa*/
+#define CLIENT_IS_WAITING "CLIENT_IS_WAITING"
 /* Stringa che indica l'avveunta ricezione del segnale SIGHUP */
 #define SHUT_DOWN "SHUT_DOWN"
 /* Stringa che indica l'avvenuta ricezione del segnale SIGINT o SIGQUIT */

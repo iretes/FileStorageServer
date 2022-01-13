@@ -41,8 +41,11 @@ typedef enum response_code {
 	TOO_LONG_PATH 			= 2,
 	TOO_LONG_CONTENT 		= 3,
 	INVALID_PATH			= 4,
-	TEMPORARILY_UNAVAILABLE = 5,
-	MAX_RES_CODE 			= 5
+	FILE_NOT_EXISTS 		= 5,
+	FILE_ALREADY_EXISTS 	= 6,
+	FILE_ALREADY_OPEN 		= 7,
+	TEMPORARILY_UNAVAILABLE = 8,
+	MAX_RES_CODE 			= 8
 } response_code_t;
 
 /**
