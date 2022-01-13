@@ -599,6 +599,9 @@ int main(int argc, char *argv[]) {
 	NEQ0(pthread_join(sig_handler_thread, NULL), r);
 	NEQ0_DO(pthread_mutex_destroy(&sig_mutex), r, EXTF);
 
+	// stampo le statistiche
+	EQM1_DO(print_statistics(storage), r, EXTF);
+
 	destroy_storage(storage);
 	logger_destroy(logger);
 	free(config->socket_path);

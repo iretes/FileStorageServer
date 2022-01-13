@@ -10,6 +10,9 @@
 #include <config_parser.h>
 #include <logger.h>
 
+/* Numero di bytes che costituiscono un MByte */
+#define BYTES_IN_A_MEGABYTE 1000000
+
 /**
  * @def      LOG()
  * @brief    Controlla il valore di ritorno di una chiamata di log_record()
@@ -164,5 +167,15 @@ int close_file_handler(storage_t* storage,
 						int client_fd, 
 						int worker_id, 
 						char* file_path);
+
+/**
+ * @function         print_statistics()
+ * @brief            Stampa le statistiche sullo stato dello storage.
+ * 
+ * @param storage    Struttura storage
+ * 
+ * @return           0 in caso di successo, -1 se storage è @c NULL .
+ */
+int print_statistics(storage_t* storage);
 
 #endif /* STORAGE_SERVER_H */

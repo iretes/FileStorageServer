@@ -483,19 +483,10 @@ request_t* read_request(storage_t* storage, int master_fd, int client_fd, int wo
 			errno = ECOMM;
 			return NULL;
 		}
-		// controllo che sia un path valido (non contenga ',' e finisca con '\0')
-		if (req->file_path[file_path_len-1] != '\0' || strchr(req->file_path, ',') != NULL) {
-			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
-				worker_id, req_code_to_str(req->code), resp_code_to_str(INVALID_PATH), client_fd, req->file_path, 0));
-			send_response_code(client_fd, INVALID_PATH);
-			close_client_connection(storage, master_fd, client_fd, worker_id);
-			free(req->file_path);
-			free(req);
-			errno = ECOMM;
-			return NULL;
-		}
-		// controllo che sia un path assoluto
-		if (strchr(req->file_path, '/') != req->file_path) {
+		// controllo che sia un path valido (non contenga ',' finisca con '\0' e inizi con '/')
+		if (req->file_path[file_path_len-1] != '\0' ||
+			strchr(req->file_path, ',') != NULL ||
+			strchr(req->file_path, '/') != req->file_path) {
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 				worker_id, req_code_to_str(req->code), resp_code_to_str(INVALID_PATH), client_fd, req->file_path, 0));
 			send_response_code(client_fd, INVALID_PATH);
@@ -656,5 +647,40 @@ int close_file_handler(storage_t* storage,
 						int client_fd, 
 						int worker_id, 
 						char* file_path) {
+	return 0;
+}
+
+int print_statistics(storage_t* storage) {
+	if (storage == NULL)
+		return -1;
+
+	int r;
+
+	NEQ0_DO(pthread_mutex_lock(&storage->mutex), r, EXTF);
+
+	fprintf(stdout, "================== STATISTICHE ==================\n");
+	fprintf(stdout, "Massimo numero di MB memorizzati: %.6f (%zu bytes)\n", 
+	(double) storage->max_bytes_stored / BYTES_IN_A_MEGABYTE, storage->max_bytes_stored);
+	fprintf(stdout, "Massimo numero di file memorizzati: %zu\n", storage->max_files_stored);
+	fprintf(stdout, "Numero di esecuzioni dell'algoritmo di rimpiazzamento: %zu\n", storage->evicted_files);
+
+	if (storage->files_queue == NULL) {
+		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+		return 0;
+	}
+
+	file_t* file;
+	if (list_is_empty(storage->files_queue)) {
+		fprintf(stdout, "Nessun file attualmente memorizzato\n");
+	}
+	else {
+		fprintf(stdout, "File attualmente memorizzati:\n");
+		list_for_each(storage->files_queue, file) {
+			fprintf(stdout, "%s\n", file->path);
+		}
+	}
+
+	NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+
 	return 0;
 }
