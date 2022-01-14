@@ -857,11 +857,118 @@ int lock_file_handler(storage_t* storage,
 	return 0;
 }
 
+void give_lock_to_waiting_client(storage_t* storage, file_t* file, int worker_id, int master_fd) {
+	int r, fd;
+
+	// rimuovo il primo cliente in attesa di acquisire la lock su file
+	ERRNOSET_DO(int_list_head_remove(file->pending_lock_fds, &fd), r, EXTF);
+	if (r == -1) {
+		// nessun cliente è in attesa di acquisire la lock
+		file->locked_by_fd = -1;
+		return;
+	}
+
+	file->locked_by_fd = fd;
+
+	// recupero l'oggetto relativo al client divenuto il detentore della lock
+	client_t* client;
+	EQM1_DO(conc_hasht_lock(storage->connected_clients, &fd), r, EXTF);
+	ERRNOSET_DO(conc_hasht_get_value(storage->connected_clients, &fd), client, EXTF);
+	if (client == NULL) {
+		EQM1_DO(conc_hasht_unlock(storage->connected_clients, &fd), r, EXTF);
+		return;
+	}
+	// inserisco il file nella lista di file bloccati dal cliente
+	EQM1_DO(list_tail_insert(client->locked_files, file), r, EXTF);
+	EQM1_DO(conc_hasht_unlock(storage->connected_clients, &fd), r, EXTF);
+
+	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+		worker_id, OP_SUSPENDED, resp_code_to_str(OK), fd, file->path, 0));
+
+	// rispondo al client in attesa della lock l'esito positivo dell'operazione
+	if (send_response_code(fd, OK) == -1)
+		return; // TODO: da gestire
+	
+	// comunico al master di aver servito il cliente che era in attesa
+	EQM1_DO(writen(master_fd, &fd, sizeof(int)), r, EXTF);
+	
+	return;
+}
+
 int unlock_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
 						int worker_id, 
 						char* file_path) {
+	if (storage == NULL || master_fd < 0 || client_fd < 0 || file_path == NULL || strlen(file_path) == 0)
+		return -1;
+	
+	int r;
+	
+	// recupero il file
+	file_t* file = NULL;
+	EQM1_DO(conc_hasht_lock(storage->files_ht, file_path), r, EXTF);
+	ERRNOSET_DO(conc_hasht_get_value(storage->files_ht, file_path), file, EXTF);
+	
+	// controllo se il file esiste
+	if (file == NULL) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+			worker_id, req_code_to_str(UNLOCK), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
+		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		return 0;
+	}
+
+	// controllo se il cliente ha acquisito la lock sul file
+	if (file->locked_by_fd != client_fd) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+			worker_id, req_code_to_str(UNLOCK), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
+		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		return 0;
+	}
+
+	// recupero l'oggetto relativo al cliente richiedente
+	client_t* client;
+	file_t* not_used;
+	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
+	EQNULL_DO(conc_hasht_get_value(storage->connected_clients, &client_fd), client, EXTF);
+	// rimuovo il file dalla lista di file bloccati dal cliente
+	EQNULL_DO(list_remove_and_get(client->locked_files, file), not_used, EXTF);
+	EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
+
+	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+		worker_id, req_code_to_str(UNLOCK), resp_code_to_str(OK), client_fd, file_path, 0));
+
+	// passo la lock sul file a un eventuale cliente in attesa
+	give_lock_to_waiting_client(storage, file, worker_id, master_fd);
+
+	// elimino la possibilità del cliente di effettuare una write sul file
+	if (file->can_write_fd == client_fd)
+		file->can_write_fd = -1;
+
+	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+	
+	/* invio l'esito positivo al cliente e comunico al master di aver servito il cliente 
+	   (in caso di errore chiudo la connessione del cliente) */
+	if (send_response_code(client_fd, OK) == -1)
+		close_client_connection(storage, master_fd, client_fd, worker_id);
+	else
+		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+
+	free(file_path);
 	return 0;
 }
 
