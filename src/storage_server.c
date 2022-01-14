@@ -454,7 +454,7 @@ request_t* read_request(storage_t* storage, int master_fd, int client_fd, int wo
 			return NULL;
 		}
 		// controllo se il path è troppo lungo
-		if (file_path_len > (PATH_MAX-1)) {
+		if (file_path_len > PATH_MAX) {
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,,%d",
 				worker_id, req_code_to_str(req->code), resp_code_to_str(TOO_LONG_PATH), client_fd, 0));
 			send_response_code(client_fd, TOO_LONG_PATH);

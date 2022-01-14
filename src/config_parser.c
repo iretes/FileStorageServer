@@ -101,30 +101,46 @@
 		} \
 	} while(0);
 
-int config_parser(config_t *config, char* filepath) {
-	// variabili per stabilire se i parametri sono stati specificati più volte
-	bool nworkers_found, workersqueue_found, maxfiles_found, 
-	maxbytes_found, maxlocks_found, expclients_found, 
-	socket_found, log_found, evpolicy_found;
-	nworkers_found = workersqueue_found = maxfiles_found = 
-	maxbytes_found = maxlocks_found = expclients_found = 
-	socket_found = log_found = evpolicy_found = false;
+config_t* config_init() {
+	config_t* config = malloc(sizeof(config_t));
+	if (!config)
+		return NULL;
 
-	// setto i valori di default dei parametri
 	config->n_workers = DEFAULT_N_WORKERS;
 	config->dim_workers_queue = DEFAULT_DIM_WORKERS_QUEUE;
 	config->max_file_num = DEFAULT_MAX_FILES;
 	config->max_bytes = DEFAULT_MAX_BYTES;
 	config->max_locks = DEFAULT_MAX_LOCKS;
 	config->expected_clients = DEFAULT_EXPECTED_CLIENTS;
-	config->eviction_policy = DEFAULT_EVICTION_POLICY;
 	config->socket_path = NULL;
 	config->log_file_path = NULL;
+	config->eviction_policy = DEFAULT_EVICTION_POLICY;
 
-	if (config == NULL || filepath == NULL || strlen(filepath) == 0) {
+	return config;
+}
+
+void config_destroy(config_t* config) {
+	if (!config)
+		return;
+	if (config->socket_path)
+		free(config->socket_path);
+	if (config->log_file_path)
+		free(config->log_file_path);
+	free(config);
+	config = NULL;
+}
+
+int config_parser(config_t *config, char* filepath) {
+	if (config == NULL || (filepath != NULL && strlen(filepath) == 0)) {
 		errno = EINVAL;
 		return -1;
 	}
+	if (filepath == NULL) {
+		STR_CPY_GOTO(DEFAULT_SOCKET_PATH, config->socket_path, config_parser_exit);
+		STR_CPY_GOTO(DEFAULT_LOG_PATH, config->log_file_path, config_parser_exit);
+		return 0;
+	}
+
 	// apro il file di configurazione
 	FILE* f = NULL;
 	f = fopen(filepath, "r");
@@ -132,6 +148,14 @@ int config_parser(config_t *config, char* filepath) {
 		fprintf(stderr, "ERR: impossibile aprire il file di configurazione '%s'\n", filepath);
 		return -1;
 	}
+
+	// variabili per stabilire se i parametri sono stati specificati più volte
+	bool nworkers_found, workersqueue_found, maxfiles_found, 
+	maxbytes_found, maxlocks_found, expclients_found, 
+	socket_found, log_found, evpolicy_found;
+	nworkers_found = workersqueue_found = maxfiles_found = 
+	maxbytes_found = maxlocks_found = expclients_found = 
+	socket_found = log_found = evpolicy_found = false;
 
 	char buf[CONFIG_LINE_SIZE] = {0};
 	char *param, *value, *tmpstr, *remaining;

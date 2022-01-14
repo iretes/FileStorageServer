@@ -393,15 +393,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// se il path del file di configurazione non è stato indicato da linea di comando setto il path di default
-	if (config_file == NULL) {
-		size_t config_file_len = strlen(DEFAULT_CONFIG_PATH) + 1;
-		EQNULL_DO(calloc(config_file_len, sizeof(char)), config_file, EXTF);
-		strcpy(config_file, DEFAULT_CONFIG_PATH);
-	}
-
 	// effettuo il parsing del file di configurazione
-	EQNULL_DO(malloc(sizeof(config_t)), config, EXTF);
+	EQNULL_DO(config_init(), config, EXTF);
 	if (config_parser(config, config_file) == -1) {
 		extval = EXIT_FAILURE;
 		goto server_exit;
@@ -604,23 +597,13 @@ int main(int argc, char *argv[]) {
 
 	destroy_storage(storage);
 	logger_destroy(logger);
-	free(config->socket_path);
-	free(config->log_file_path);
-	free(config);
+	config_destroy(config);
 	return 0;
 
 server_exit:
 	if (config_file)
 		free(config_file);
-	if (config) {
-		if (config->socket_path) {
-			unlink(config->socket_path);
-			free(config->socket_path);
-		}
-		if (config->log_file_path)
-			free(config->log_file_path);
-		free(config);
-	}
+	config_destroy(config);
 	// invio un segnale al thread dedicato alla ricezione di segnali
 	NEQ0(pthread_kill(sig_handler_thread, SIGUSR1), r);
 	NEQ0(pthread_join(sig_handler_thread, NULL), r);

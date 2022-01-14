@@ -79,6 +79,24 @@ typedef struct config {
 } config_t;
 
 /**
+ * @function    config_init()
+ * @brief       Inizializza la struttura config_t.
+ * 
+ * @return      Un puntatore a una struttura config_t in caso di successo, 
+ *              -1 in caso di fallimento con errno settato ad indicare l'errore.
+ * @note        Può fallire e settare errno se si verificano gli errori specificati da malloc().
+ */
+config_t* config_init();
+
+/**
+ * @function        config_destroy()
+ * @brief           Distrugge la struttura config deallocando la memoria.
+ * 
+ * @param config    Puntatore alla struttura config_t da distruggere
+ */
+void config_destroy(config_t* config);
+
+/**
  * @function        config_parse()
  * @brief           Effettua il parsing del file di configurazione.
  *
