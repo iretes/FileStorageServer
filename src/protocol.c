@@ -51,6 +51,10 @@ char* resp_code_to_str(response_code_t code) {
 			return "FILE_ALREADY_EXISTS";
 		case FILE_ALREADY_OPEN:
 			return "FILE_ALREADY_OPEN";
+		case FILE_ALREADY_LOCKED:
+			return "FILE_ALREADY_LOCKED";
+		case OPERATION_NOT_PERMITTED:
+			return "OPERATION_NOT_PERMITTED";
 		case TEMPORARILY_UNAVAILABLE:
 			return "TEMPORARILY_UNAVAILABLE";
 		default: 
