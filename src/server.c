@@ -460,9 +460,9 @@ int main(int argc, char *argv[]) {
 		if (is_flag_setted(sig_mutex, shut_down)) {
 			if (listenfd != -1) {
 				FD_CLR(listenfd, &set);
-				EQM1(close(listenfd), r);
 				if (listenfd == fdmax)
 					fdmax = get_max_fd(set, fdmax);
+				EQM1(close(listenfd), r);
 				listenfd = -1;
 			}
 		}
@@ -534,6 +534,7 @@ int main(int argc, char *argv[]) {
 				// se negativo significa che il cliente associato al descrittore -(client_fd) si è disconnesso
 				if (client_fd < 0) {
 					connected_clients --;
+					EQM1(close((-client_fd)), r);
 					LOG(log_record(logger, "%d,%s,,%d,,,,,%d",
 						MASTER_ID, CLOSED_CONNECTION, (-client_fd), connected_clients));
 					// se è stato ricevuto il segnale SIGHUP e non ci sono più clienti connessi posso terminare
@@ -586,6 +587,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
+	if (listenfd != -1)
+		EQM1(close(listenfd), r);
 	
 	threadpool_destroy(pool);
 	EQM1(unlink(config->socket_path), r);

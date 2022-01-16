@@ -10,7 +10,7 @@
 #define MASTER_ID 0
 
 /* Stringa di intestazione del file */
-#define INIT_LINE "TIME,THREAD_ID,OPERATION,OUTCOME,CLIENT_ID,FILE,BYTES_PROCESSED,CURR_FILES,CURR_BYTES,CURR_CLIENTS\n"
+#define INIT_LINE "TIME,THREAD_ID,OPERATION,OUTCOME,CLIENT_FD,FILE,BYTES_PROCESSED,CURR_FILES,CURR_BYTES,CURR_CLIENTS\n"
 /* Stringa che indica la connessione di un client */
 #define NEW_CONNECTION "NEW_CONNECTION"
 /* Stringa che indica la disconnessione di un client */

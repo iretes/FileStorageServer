@@ -568,7 +568,6 @@ static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd,
 	int neg_client_fd = -client_fd;
 	EQM1_DO(writen(master_fd, &neg_client_fd, sizeof(int)), r, EXTF);
 
-	EQM1(close(client_fd), r);
 	destroy_client(client);
 
 	return clients_unreachable;
