@@ -1040,6 +1040,92 @@ int readn_file_handler(storage_t* storage,
 						int client_fd, 
 						int worker_id, 
 						int n) {
+	if (storage == NULL || master_fd < 0 || client_fd < 0)
+		return -1;
+	
+	int r;
+
+	NEQ0_DO(pthread_mutex_lock(&storage->mutex), r, EXTF);
+
+	int file_to_send = n;
+	if (n <= 0)
+		file_to_send = storage->curr_file_num;
+
+	list_t* files_to_read;
+	size_t file_sendable = 0;
+	
+	// creo una lista per memorizzare i file che possono essere letti al cliente
+	EQNULL_DO(list_create(cmp_file, (void (*)(void*)) destroy_file), files_to_read, EXTF);
+
+	file_t* file;
+	list_for_each(storage->files_queue, file) {
+		if (file_sendable == file_to_send)
+			break;
+		// conto i file che possono essere inviati acquisendo la lock sulla tabella hash e li memorizzo nella lista
+		EQM1_DO(conc_hasht_lock(storage->files_ht, file->path), r, EXTF);
+		if (file->locked_by_fd == client_fd || file->locked_by_fd == -1) {
+			file_sendable ++;
+			EQM1_DO(list_tail_insert(files_to_read, file), r, EXTF);
+		}
+		else // rilascio la lock sui file che non posso inviare
+			EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
+	}
+
+	NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+
+	// invio l'esito positivo al cliente
+	int err = 0;
+	if (send_response_code(client_fd, OK) == -1)
+		err = 1;
+
+	// invio al cliente il numero di file che verranno inviati
+	if (!err) {
+		if (send_size(client_fd, file_sendable) == -1)
+			err = 1;
+	}
+
+	if (file_sendable == 0) {
+		LOG(log_record(storage->logger, "%d,%s 0/0,%s,%d,,%d",
+			worker_id, req_code_to_str(READN), resp_code_to_str(OK), client_fd, 0));
+	}
+
+	int file_sent = 0;
+	list_for_each(files_to_read, file) {
+		if (!err) {
+			size_t path_size = strlen(file->path) + 1;
+			// invio al cliente il nome del file
+			if (send_file_name(client_fd, path_size, file->path) == -1)
+				err = 1;
+		}
+		if (!err) {
+			// invio al cliente il contenuto del file
+			if (send_file_content(client_fd, file->content_size, file->content) == -1)
+				err = 1;
+		}
+		if (!err) {
+			LOG(log_record(storage->logger, 
+				"%d,%s %d/%zu,%s,%d,%s,%zu",
+				worker_id, 
+				req_code_to_str(READN), 
+				file_sent + 1, 
+				file_sendable, 
+				resp_code_to_str(OK), 
+				client_fd, file->path, 
+				file->content_size));
+
+			file_sent ++;
+		}
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
+	}
+
+	/* se si è verificato un errore chiudo la connessione del cliente 
+	   altrimenti comunico al master di aver servito il cliente */
+	if (err)
+		close_client_connection(storage, master_fd, client_fd, worker_id);
+	else
+		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+
+	list_destroy(files_to_read, LIST_DO_NOT_FREE_DATA);
 	return 0;
 }
 
