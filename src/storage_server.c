@@ -147,6 +147,69 @@ static int send_response_code(int fd, response_code_t code) {
 }
 
 /**
+ * @function       send_size()
+ * @brief          Invia al cliente associato al file descriptor fd size
+ * 
+ * @param fd       File descriptor del cliente
+ * @param size     Valore da inviare
+ * 
+ * @return         0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
+ * @note           Errno viene eventualmente settato da writen()
+ */
+static int send_size(int fd, size_t size) {
+	int r;
+	WRITE_TO_CLIENT(fd, &size, sizeof(size_t), r);
+	if (r == -1 || r == 0)
+		return -1;
+	return 0;
+}
+
+/**
+ * @function           send_file_name()
+ * @brief              Invia al cliente associato al file descriptor fd la dimensione del path path_size e path
+ * 
+ * @param fd           File descriptor del cliente
+ * @param path_size    Dimensione del path 
+ * @param path         Path del file
+ * 
+ * @return             0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
+ * @note               Errno viene eventualmente settato da writen() o da send_size()
+ */
+static int send_file_name(int fd, size_t path_size, char* path) {
+	int r;
+	if (send_size(fd, path_size) == -1)
+		return -1;
+	WRITE_TO_CLIENT(fd, path, path_size*sizeof(char), r);
+	if (r == -1 || r == 0)
+		return -1;
+	return 0;
+}
+
+/**
+ * @function              send_file_content()
+ * @brief                 Invia al cliente associato al file descriptor fd la dimensione del file file_size e il contenuto 
+ *                        del file file_content
+ * 
+ * @param fd              File descriptor del cliente
+ * @param file_size       Dimensione del file
+ * @param file_content    Contenuto del file
+ * 
+ * @return                0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
+ * @note                  Errno viene eventualmente settato da writen() o da send_size()
+ */
+static int send_file_content(int fd, size_t file_size, void* file_content) {
+	int r = 0;
+	if (send_size(fd, file_size) == -1)
+		return -1;
+	if (file_size != 0) {
+		WRITE_TO_CLIENT(fd, file_content, file_size, r);
+		if (r == -1 || r == 0)
+			return -1;
+	}
+	return 0;
+}
+
+/**
  * @function      init_file()
  * @brief         Inizializza una struttura che rappresenta un file nello storage e ritorna un puntatore ad essa.
  * 
@@ -883,10 +946,93 @@ int write_file_handler(storage_t* storage,
 }
 
 int read_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
+						int master_fd,
+						int client_fd,
+						int worker_id,
 						char* file_path) {
+	if (storage == NULL || master_fd < 0 || client_fd < 0 || file_path == NULL || strlen(file_path) == 0)
+		return -1;
+	
+	int r;
+
+	// recupero il file
+	file_t* file = NULL;
+	EQM1_DO(conc_hasht_lock(storage->files_ht, file_path), r, EXTF);
+	ERRNOSET_DO(conc_hasht_get_value(storage->files_ht, file_path), file, EXTF);
+
+	// controllo se il file esiste
+	if (file == NULL) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+			worker_id, req_code_to_str(READ), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
+		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		return 0;
+	}
+
+	// controllo se il cliente ha aperto il file
+	EQM1_DO(int_list_contains(file->open_by_fds, client_fd), r, EXTF);
+	if (!r) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+			worker_id, req_code_to_str(READ), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
+		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		return 0;
+	}
+
+	// controllo se il file è bloccato da un altro cliente
+	if (file->locked_by_fd != -1 && file->locked_by_fd != client_fd) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+			worker_id, req_code_to_str(READ), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
+		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		return 0;
+	}
+
+	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%zu",
+		worker_id, req_code_to_str(READ), resp_code_to_str(OK), client_fd, file_path, file->content_size));
+
+	/* invio l'esito positivo al cliente
+	   (in caso di errore chiudo la connessione del cliente) */
+	if (send_response_code(client_fd, OK) == -1) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		close_client_connection(storage, master_fd, client_fd, worker_id);
+		free(file_path);
+		return 0;
+	}
+	
+	/* invio il contenuto del file al cliente
+	   (in caso di errore chiudo la connessione del cliente) */
+	if (send_file_content(client_fd, file->content_size, file->content) == -1) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		close_client_connection(storage, master_fd, client_fd, worker_id);
+		free(file_path);
+		return 0;
+	}
+
+	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+
+	// comunico al master di aver servito il cliente
+	EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+
+	free(file_path);
 	return 0;
 }
 
