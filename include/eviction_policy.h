@@ -13,11 +13,13 @@
  * @var FIFO    Politica first in first out
  * @var LRU     Politica least recently used
  * @var LFU     Politica least frequently used
+ * @var LW      Politica least weighted
  */
 typedef enum eviction_policy {
 	FIFO,
 	LRU,
 	LFU,
+	LW
 } eviction_policy_t;
 
 /**

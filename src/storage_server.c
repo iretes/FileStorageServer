@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <limits.h>
+#include <time.h>
 
 #include <storage_server.h>
 #include <config_parser.h>
@@ -454,6 +455,91 @@ int new_connection_handler(storage_t* storage, int client_fd) {
 	return 0;
 }
 
+
+/**
+ * @function        update_file_usage_time()
+ * @brief           Aggiorna il time stamp di ultimo utilizzo di file in base al tipo di operazione effettuata op e alla 
+ *                  politica di espulsione policy
+ * @warning         Questa funzione deve essere invocata dopo aver acquisito la lock sulla tabella hash di file per l'accesso
+ *                  a file
+ * 
+ * @param file      Puntatore alla struttura file il cui contatore deve essere aggiornato
+ * @param op        Operazione effettuata sul file
+ * @param policy    Politica di espulsione
+ */
+static void update_file_usage_time(file_t* file, request_code_t op, eviction_policy_t policy) {
+	int r;
+	switch (op) {
+		case OPEN_NO_FLAGS:
+		case OPEN_CREATE:
+		case OPEN_LOCK:
+		case OPEN_CREATE_LOCK:
+		case WRITE:
+		case APPEND:
+		case READ:
+		case READN:
+		case LOCK:
+		case UNLOCK:
+			EQM1(clock_gettime(CLOCK_REALTIME, &file->last_usage_time), r);
+			break;
+		case CLOSE:
+		case REMOVE:
+		default: ;
+	} 
+}
+
+/**
+ * @function        update_file_usage_counter()
+ * @brief           Aggiorna il contatore degli utilizzi di file in base al tipo di operazione effettuata op e alla politica 
+ *                  di espulsione policy
+ * @warning         Questa funzione deve essere invocata avendo accesso esclusivo al file
+ * 
+ * @param file      Oggetto file il cui contatore deve essere aggiornato
+ * @param op        Operazione effettuata sul file
+ * @param policy    Politica di espulsione
+ */
+static void update_file_usage_counter(file_t* file, request_code_t op, eviction_policy_t policy) {
+	switch (op) {
+		case OPEN_CREATE_LOCK:
+		case OPEN_CREATE:
+			if (policy == LW)
+				file->usage_counter = 2;
+			else
+				file->usage_counter = 1;
+			break;
+		case OPEN_NO_FLAGS:
+			if (policy == LW) {
+				if (file->usage_counter <= INT_MAX-2)	
+					file->usage_counter += 2;
+			}
+			else {
+				if (file->usage_counter != INT_MAX)
+					file->usage_counter += 1;
+			}
+			break;
+		case OPEN_LOCK:
+		case WRITE:
+		case APPEND:
+		case READ:
+		case READN:
+			if (file->usage_counter != INT_MAX)
+				file->usage_counter += 1;
+			break;
+		case LOCK:
+		case UNLOCK:
+			if (policy != LW)
+				if (file->usage_counter != INT_MAX)
+					file->usage_counter += 1;
+			break;
+		case CLOSE:
+			if (policy == LW)
+				file->usage_counter -= 2;
+			break;
+		case REMOVE:
+		default: ;
+	}
+}
+
 /**
  * @function           give_lock_to_waiting_client()
  * @brief              Estrae il primo cliente in attesa di acquisire la lock su file e gli assegna la lock.
@@ -603,6 +689,9 @@ static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd,
 	list_for_each(client->opened_files, file) {
 		if (file != NULL && file->path != NULL) {
 			EQM1_DO(conc_hasht_lock(storage->files_ht, file->path), r, EXTF);
+			// aggiorno i metadati del file necessari per il caching
+			update_file_usage_counter(file, CLOSE, storage->eviction_policy);
+			update_file_usage_time(file, CLOSE, storage->eviction_policy);
 			// rimuovo il cliente dalla lista di descrittori di clienti che hanno aperto il file
 			EQM1_DO(int_list_remove(file->open_by_fds, client_fd), r, EXTF);
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
@@ -963,6 +1052,10 @@ int open_file_handler(storage_t* storage,
 		}
 	}
 
+	// aggiorno i metadati del file necessari per il caching
+	update_file_usage_counter(file, mode, storage->eviction_policy);
+	update_file_usage_time(file, mode, storage->eviction_policy);
+
 	// inserisco il cliente tra coloro che hanno aperto il file
 	EQM1_DO(int_list_tail_insert(file->open_by_fds, client_fd), r, EXTF);
 
@@ -1086,6 +1179,10 @@ int read_file_handler(storage_t* storage,
 		return 0;
 	}
 
+	// aggiorno i metadati del file necessari per il caching
+	update_file_usage_counter(file, READ, storage->eviction_policy);
+	update_file_usage_time(file, READ, storage->eviction_policy);
+
 	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%zu",
 		worker_id, req_code_to_str(READ), resp_code_to_str(OK), client_fd, file_path, file->content_size));
 
@@ -1194,6 +1291,10 @@ int readn_file_handler(storage_t* storage,
 				client_fd, file->path, 
 				file->content_size));
 
+			// aggiorno i metadati del file necessari per il caching
+			update_file_usage_counter(file, READN, storage->eviction_policy);
+			update_file_usage_time(file, READN, storage->eviction_policy);
+
 			file_sent ++;
 		}
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
@@ -1270,6 +1371,10 @@ int lock_file_handler(storage_t* storage,
 		free(file_path);
 		return 0;
 	}
+
+	// aggiorno i metadati del file necessari per il caching
+	update_file_usage_counter(file, LOCK, storage->eviction_policy);
+	update_file_usage_time(file, LOCK, storage->eviction_policy);
 
 	// controllo se il file è bloccato da un altro cliente
 	if (file->locked_by_fd != -1) {
@@ -1371,6 +1476,10 @@ int unlock_file_handler(storage_t* storage,
 	// elimino la possibilità del cliente di effettuare una write sul file
 	if (file->can_write_fd == client_fd)
 		file->can_write_fd = -1;
+
+	// aggiorno i metadati del file necessari per il caching
+	update_file_usage_counter(file, UNLOCK, storage->eviction_policy);
+	update_file_usage_time(file, UNLOCK, storage->eviction_policy);
 
 	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 	
@@ -1553,6 +1662,10 @@ int close_file_handler(storage_t* storage,
 	// elimino la possibilità del cliente di effettuare una write sul file
 	if (file->can_write_fd == client_fd)
 		file->can_write_fd = -1;
+
+	// aggiorno i metadati del file necessari per il caching
+	update_file_usage_counter(file, CLOSE, storage->eviction_policy);
+	update_file_usage_time(file, CLOSE, storage->eviction_policy);
 
 	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 

@@ -15,6 +15,8 @@ char* eviction_policy_to_str(eviction_policy_t policy) {
 			return "LRU";
 		case LFU:
 			return "LFU";
+		case LW:
+			return "LW";
 		default: 
 			return NULL;
 	}
