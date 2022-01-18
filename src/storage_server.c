@@ -557,7 +557,6 @@ int new_connection_handler(storage_t* storage, int client_fd) {
 	return 0;
 }
 
-
 /**
  * @function        update_file_usage_time()
  * @brief           Aggiorna il time stamp di ultimo utilizzo di file in base al tipo di operazione effettuata op e alla 
@@ -1214,6 +1213,7 @@ int open_file_handler(storage_t* storage,
 			return 0;
 		}
 
+		// se necessario espello un file
 		if (storage->curr_file_num == storage->max_files) {
 			/* rilascio la lock sulla tabella hash ma mantengo la lock sullo storage
 			   (per cui non potrà essere creato un file con lo stesso nome) */

@@ -116,6 +116,23 @@ int rejected_task_handler(storage_t* storage,
 						int master_fd, 
 						int client_fd);
 
+/**
+ * @function           open_file_handler()
+ * @brief              Serve la richiesta di apertura di un file.
+ *                     Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                     altrimenti scrive client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha effettuato la richiesta
+ * @param worker_id    Identificato del worker che serve la richiesta
+ * @param file_path    Path del file da aprire
+ * @param mode         Modalità di aperura (OPEN_NO_FLAGS | OPEN_CREATE | OPEN_LOCK | OPEN_CREATE_LOCK)
+ * 
+ * @return             0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
+ *                     @c NULL o la sua lunghezza è 0 o mode è diversa da OPEN_NO_FLAGS, OPEN_CREATE, OPEN_LOCK e 
+ *                     OPEN_CREATE_LOCK.
+ */
 int open_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
@@ -123,6 +140,24 @@ int open_file_handler(storage_t* storage,
 						char* file_path, 
 						request_code_t mode);
 
+/**
+ * @function              write_file_handler()
+ * @brief                 Serve la richiesta di write o append di un file.
+ *                        Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                        altrimenti scrive client_fd.
+ * 
+ * @param storage         Struttura storage
+ * @param master_fd       Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd       Descrittore del client che ha effettuato la richiesta
+ * @param worker_id       Identificato del worker che serve la richiesta
+ * @param file_path       Path del file da scrivere
+ * @param content         Contenuto del file da scrivere
+ * @param content_size    Size del file da scrivere
+ * @param mode            Modalità di scrittura (WRITE | APPEND)
+ * 
+ * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
+ *                        @c NULL o la sua lunghezza è 0 o mode è diversa da WRITE e APPEND.
+ */
 int write_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
@@ -132,36 +167,126 @@ int write_file_handler(storage_t* storage,
 						size_t content_size, 
 						request_code_t mode);
 
+/**
+ * @function           read_file_handler()
+ * @brief              Serve la richiesta di read di un file.
+ *                     Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                     altrimenti scrive client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha effettuato la richiesta
+ * @param worker_id    Identificato del worker che serve la richiesta
+ * @param file_path    Path del file da leggere
+ * 
+ * @return             0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
+ *                     @c NULL o la sua lunghezza è 0.
+ */
 int read_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
 						int worker_id, 
 						char* file_path);
 
+/**
+ * @function           readn_file_handler()
+ * @brief              Serve la richiesta di readn.
+ *                     Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                     altrimenti scrive client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha effettuato la richiesta
+ * @param worker_id    Identificativo del worker che serve la richiesta
+ * @param n            Numero di file da leggere, se <= 0 indica una richiesta di lettura di tutti i file (leggibili) 
+ *                     dello storage
+ * 
+ * @return             0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi.
+ */
 int readn_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
 						int worker_id, 
 						int n);
 
+/**
+ * @function           lock_file_handler()
+ * @brief              Serve la richiesta di lock di un file.
+ *                     Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                     altrimenti scrive client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha effettuato la richiesta
+ * @param worker_id    Identificativo del worker che serve la richiesta
+ * @param file_path    Path del file su cui efferruare l'operazione di lock
+ * 
+ * @return             0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
+ *                     @c NULL o la sua lunghezza è 0.
+ */
 int lock_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
 						int worker_id, 
 						char* file_path);
 
+/**
+ * @function           unlock_file_handler()
+ * @brief              Server la richiesta di unlock di un file.
+ *                     Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                     altrimenti scrive client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha effettuato la richiesta
+ * @param worker_id    Identificativo del worker che serve la richiesta
+ * @param file_path    Path del file su cui effettuare l'operazione di unlock
+ * 
+ * @return             0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
+ *                     @c NULL o la sua lunghezza è 0.
+ */
 int unlock_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
 						int worker_id, 
 						char* file_path);
 
+/**
+ * @function           remove_file_handler()
+ * @brief              Server la richiesta di remove di un file. 
+ *                     Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                     altrimenti scrive client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha effettuato la richiesta
+ * @param worker_id    Identificativo del worker che serve la richiesta
+ * @param file_path    Path del file da rimuovere
+ * 
+ * @return             0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
+ *                     @c NULL o la sua lunghezza è 0.
+ */
 int remove_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
 						int worker_id, 
 						char* file_path);
 
+/**
+ * @function           close_file_handler()
+ * @brief              Server la richiesta di close di un file.
+ *                     Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
+ *                     altrimenti scrive client_fd.
+ * 
+ * @param storage      Struttura storage
+ * @param master_fd    Descrittore del master thread per la comunicazione tra master e workers
+ * @param client_fd    Descrittore del client che ha effettuato la richiesta
+ * @param worker_id    Identificativo del worker che serve la richiesta
+ * @param file_path    Path del file da chiudere
+ * 
+ * @return             0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
+ *                     @c NULL o la sua lunghezza è 0.
+ */
 int close_file_handler(storage_t* storage, 
 						int master_fd, 
 						int client_fd, 
