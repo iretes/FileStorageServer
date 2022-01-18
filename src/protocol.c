@@ -57,6 +57,8 @@ char* resp_code_to_str(response_code_t code) {
 			return "OPERATION_NOT_PERMITTED";
 		case TEMPORARILY_UNAVAILABLE:
 			return "TEMPORARILY_UNAVAILABLE";
+		case COULD_NOT_EVICT:
+			return "COULD_NOT_EVICT";
 		default: 
 			return NULL;
 	}

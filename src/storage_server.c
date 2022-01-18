@@ -1187,6 +1187,7 @@ int open_file_handler(storage_t* storage,
 	int r;
 
 	file_t* file = NULL;
+	evicted_file_t *evicted_file = NULL;
 
 	// controllo se la modalità di apertura del file prevede la creazione del file
 	if (mode == OPEN_CREATE || mode == OPEN_CREATE_LOCK) {
@@ -1213,7 +1214,42 @@ int open_file_handler(storage_t* storage,
 		}
 
 		if (storage->curr_file_num == storage->max_files) {
-			// TODO: espulsione del file
+			/* rilascio la lock sulla tabella hash ma mantengo la lock sullo storage
+			   (per cui non potrà essere creato un file con lo stesso nome) */
+			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+
+			// se il file esiste mi assicuro di non espellerlo
+			char* filepath_needed = NULL;
+			if (mode == OPEN_LOCK || mode == OPEN_NO_FLAGS)
+				filepath_needed = file_path;
+			evicted_file = evict_file(storage, filepath_needed);
+
+			// controllo se è stato possibile espellere il file
+			if (evicted_file == NULL) {
+				NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+				LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
+					worker_id, req_code_to_str(mode), resp_code_to_str(COULD_NOT_EVICT), client_fd, file_path, 0));
+				/* rispondo al cliente che non è stato possibile espellere file
+				   e comunico al master di aver servito il cliente
+				   (in caso di errore chiudo la connessione del cliente) */
+				if (send_response_code(client_fd, COULD_NOT_EVICT) == -1)
+					close_client_connection(storage, master_fd, client_fd, worker_id);
+				else
+					EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+				free(file_path);
+				return 0;
+			}
+			LOG(log_record(storage->logger, 
+				"%d,%s,%s,,%s,%d,%zu,%zu", 
+				worker_id,
+				EVICTION, 
+				resp_code_to_str(OK), 
+				evicted_file->path, 
+				evicted_file->content_size, 
+				storage->curr_file_num, 
+				storage->curr_bytes));
+
+			EQM1_DO(conc_hasht_lock(storage->files_ht, file_path), r, EXTF);
 		}
 
 		// creo un file e lo aggiungo allo storage
@@ -1301,6 +1337,11 @@ int open_file_handler(storage_t* storage,
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 				worker_id, req_code_to_str(mode), CLIENT_IS_WAITING, client_fd, file_path, 0));
+			if (evicted_file != NULL) {
+				// notifico ai clienti in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
+				notify_clients_file_not_exists(storage, file_path, master_fd, evicted_file->pending_lock_fds, worker_id);
+				destroy_evicted_file(evicted_file);
+			}
 			free(file_path);
 			return 0;
 		}
@@ -1320,6 +1361,12 @@ int open_file_handler(storage_t* storage,
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 	else
 		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+
+	if (evicted_file != NULL) {
+		// notifico ai clienti in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
+		notify_clients_file_not_exists(storage, evicted_file->path, master_fd, evicted_file->pending_lock_fds, worker_id);
+		destroy_evicted_file(evicted_file);
+	}
 
 	if (mode == OPEN_NO_FLAGS || mode == OPEN_LOCK) // in caso di create file_path è riferito nello storage
 		free(file_path);

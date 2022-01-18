@@ -15,6 +15,8 @@
 #define NEW_CONNECTION "NEW_CONNECTION"
 /* Stringa che indica la disconnessione di un client */
 #define CLOSED_CONNECTION "CLOSED_CONNECTION"
+/* Stringa che indica l'espulsione di un file dallo storage */
+#define EVICTION "EVICTION"
 /* Stringa che indica che l'operazione richiesta dal client è stata sospesa*/
 #define CLIENT_IS_WAITING "CLIENT_IS_WAITING"
 /* Stringa che indica il completamento di una richiesta di un'operazione precedentemente sospesa */

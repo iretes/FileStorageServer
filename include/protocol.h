@@ -47,7 +47,8 @@ typedef enum response_code {
 	FILE_ALREADY_LOCKED 	= 8,
 	OPERATION_NOT_PERMITTED = 9,
 	TEMPORARILY_UNAVAILABLE = 10,
-	MAX_RES_CODE 			= 10
+	COULD_NOT_EVICT			= 11,
+	MAX_RES_CODE 			= 11
 } response_code_t;
 
 /**
