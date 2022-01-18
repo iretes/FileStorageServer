@@ -20,6 +20,7 @@
 #include <util.h>
 #include <logger.h>
 #include <log_format.h>
+#include <protocol.h>
 
 /**
  * @struct                   storage_t
@@ -1374,14 +1375,224 @@ int open_file_handler(storage_t* storage,
 	return 0;
 }
 
-int write_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
+int write_file_handler(storage_t* storage,
+						int master_fd,
+						int client_fd,
 						int worker_id, 
 						char* file_path, 
 						void* content, 
 						size_t content_size, 
 						request_code_t mode) {
+	if (storage == NULL || master_fd < 0 || client_fd < 0 || file_path == NULL || strlen(file_path) == 0 ||
+		(mode != WRITE && mode != APPEND))
+		return -1;
+
+	int r;
+
+	NEQ0_DO(pthread_mutex_lock(&storage->mutex), r, EXTF);
+
+	// recupero il file
+	file_t* file = NULL;
+	EQM1_DO(conc_hasht_lock(storage->files_ht, file_path), r, EXTF);
+	ERRNOSET_DO(conc_hasht_get_value(storage->files_ht, file_path), file, EXTF);
+
+	// controllo se il file esiste
+	if (file == NULL) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+			worker_id, req_code_to_str(mode), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
+		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		free(content);
+		return 0;
+	}
+
+	// controllo, in caso di WRITE, se il cliente può effettuare l'operazione
+	if (mode == WRITE && file->can_write_fd != client_fd) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+			worker_id, req_code_to_str(mode), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
+		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		free(content);
+		return 0;
+	}
+
+	if (mode == APPEND) {
+		// in caso di append controllo se il cliente ha aperto il file e se il file è bloccato da un altro cliente
+		EQM1_DO(int_list_contains(file->open_by_fds, client_fd), r, EXTF);
+		if (!r || (file->locked_by_fd != -1 && file->locked_by_fd != client_fd)) {
+			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+			NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+				worker_id, req_code_to_str(mode), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
+			/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
+			(in caso di errore chiudo la connessione del cliente) */
+			if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
+				close_client_connection(storage, master_fd, client_fd, worker_id);
+			else
+				EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+			free(file_path);
+			free(content);
+			return 0;
+		}
+	}
+
+	// controllo se la dimensione del file a seguito dell'operazione è maggiore della capacità in bytes dello storage
+	if (file->content_size + content_size > storage->max_bytes) {
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+			worker_id, req_code_to_str(mode), resp_code_to_str(TOO_LONG_CONTENT), client_fd, file_path, 0));
+		/* rispondo al cliente che il contenuto del file è troppo grande e comunico al master di aver servito il cliente
+		   (in caso di errore chiudo la connessione del cliente) */
+		if (send_response_code(client_fd, TOO_LONG_CONTENT) == -1)
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+		else
+			EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+		free(file_path);
+		free(content);
+		return 0;
+	}
+
+	// lista di file espulsi
+	list_t* evicted_files = NULL;
+	EQNULL_DO(list_create(cmp_evicted_file,(void (*)(void*)) destroy_evicted_file), evicted_files, EXTF);
+	int evicted_files_num = 0;
+
+	// se necessario espello dei file
+	if (storage->curr_bytes + content_size > storage->max_bytes) {
+		/* rilascio la lock sulla tabella hash di files ma mantengo la lock sullo storage
+		   (per cui l'operazione rimane serializzata) */
+		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+	}
+
+	while (storage->curr_bytes + content_size > storage->max_bytes) {
+		evicted_file_t* evicted_file = evict_file(storage, file_path);
+		// controllo se è stato possibile espellere il file
+		if (evicted_file == NULL) {
+			NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
+				worker_id, req_code_to_str(mode), resp_code_to_str(COULD_NOT_EVICT), client_fd, file_path, 0));
+			/* rispondo al cliente che non è stato possibile espellere file e comunico al master di aver servito il cliente
+			   (in caso di errore chiudo la connessione del cliente) */
+			if (send_response_code(client_fd, COULD_NOT_EVICT) == -1)
+				close_client_connection(storage, master_fd, client_fd, worker_id);
+			else
+				EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+			list_destroy(evicted_files, LIST_FREE_DATA);
+			free(file_path);
+			free(content);
+			return 0;
+		}
+		// inserisco nella lista il file espulso
+		EQM1_DO(list_tail_insert(evicted_files, evicted_file), r, EXTF);
+		LOG(log_record(storage->logger, 
+			"%d,%s,%s,,%s,%d,%zu,%zu", 
+			worker_id, 
+			EVICTION, 
+			resp_code_to_str(OK), 
+			evicted_file->path, 
+			evicted_file->content_size, 
+			storage->curr_file_num, 
+			storage->curr_bytes));
+		
+		evicted_files_num ++;
+	}
+
+	if (evicted_files_num > 0)
+		EQM1_DO(conc_hasht_lock(storage->files_ht, file_path), r, EXTF);
+
+	// aggiorno i dati dello storage
+	storage->curr_bytes += content_size;
+	if (storage->curr_bytes > storage->max_bytes_stored)
+		storage->max_bytes_stored = storage->curr_bytes;
+
+	LOG(log_record(storage->logger, 
+		"%d,%s,%s,%d,%s,%d,,%zu",
+		worker_id, 
+		req_code_to_str(mode), 
+		resp_code_to_str(OK), 
+		client_fd, 
+		file_path, 
+		content_size, 
+		storage->curr_bytes));
+
+	NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
+
+	if (content_size != 0) {
+		// aggiorno il contenuto e la size del file
+		if (mode == WRITE) {
+			file->content = content;
+			file->content_size = content_size;
+		}
+		else {
+			EQNULL_DO(realloc(file->content, file->content_size + content_size), file->content, EXTF);
+			memcpy(file->content + file->content_size, content, content_size);
+			file->content_size += content_size;
+			free(content);
+		}
+		// elimino la possibilità del cliente di effettuare una write sul file
+		file->can_write_fd = -1;
+	}
+	
+	// aggiorno i metadati del file necessari per il caching
+	update_file_usage_counter(file, mode, storage->eviction_policy);
+	update_file_usage_time(file, mode, storage->eviction_policy);
+	
+	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
+
+	/* invio l'esito positivo al cliente
+	   (in caso di errore chiudo la connessione del cliente) */
+	if (send_response_code(client_fd, OK) == -1) {
+		close_client_connection(storage, master_fd, client_fd, worker_id);
+		goto write_exit;
+	}
+
+	/* invio al cliente il numero di file espulsi
+	   (in caso di errore chiudo la connessione del cliente) */
+	if (send_size(client_fd, evicted_files_num) == -1) {
+		close_client_connection(storage, master_fd, client_fd, worker_id);
+		goto write_exit;
+	}
+
+	evicted_file_t* evicted_file;
+	// invio al cliente i file espulsi
+	for (int i = 0; i < evicted_files_num; i ++) {
+		EQNULL_DO(list_head_remove(evicted_files), evicted_file, EXTF);
+		// notifico ai clienti in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
+		notify_clients_file_not_exists(storage, evicted_file->path, master_fd, evicted_file->pending_lock_fds, worker_id);
+		// invio il nome del file
+		if (send_file_name(client_fd, evicted_file->path_size, evicted_file->path) == -1) {
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+			goto write_exit;
+		}
+		// invio il contenuto del file
+		if (send_file_content(client_fd, evicted_file->content_size, evicted_file->content) == -1) {
+			close_client_connection(storage, master_fd, client_fd, worker_id);
+			goto write_exit;
+		}
+		destroy_evicted_file(evicted_file);
+	}
+
+	// comunico al master di aver servito il cliente
+	EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
+
+write_exit:
+	free(file_path);
+	list_destroy(evicted_files, LIST_FREE_DATA);
 	return 0;
 }
 
