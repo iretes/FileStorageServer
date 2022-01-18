@@ -6,6 +6,10 @@
 #ifndef EVICTION_POLICY_H
 #define EVICTION_POLICY_H
 
+/* Fattore per il ridimensionamento dei contatori del numero di utilizzi di un file nel caso in cui venga raggiunto da uno 
+   di essi il valore massimo*/
+#define RESIZE_OVERFLOW_FACTOR  0.5
+
 /**
  * @enum        eviction_policy_t
  * @brief       Enumerazione delle politiche di espulsione di file dallo storage.

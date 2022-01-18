@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include <storage_server.h>
 #include <config_parser.h>
@@ -81,6 +82,24 @@ typedef struct file {
 	struct timespec last_usage_time;
 	int usage_counter;
 } file_t;
+
+/**
+ * @struct                  evicted_file_t
+ * @brief                   Struttura che rappresenta un file espulso dallo storage.
+ *
+ * @var path                Path del file
+ * @var path_size           Lunghezza del path del file
+ * @var content             Contenuto del file
+ * @var content_size        Dimensione del contenuto del file
+ * @var pending_lock_fds    Lista dei file descriptor dei client in attesa di acquisire la lock sul file espulso
+ */
+typedef struct evicted_file {
+	char* path;
+	size_t path_size;
+	void* content;
+	size_t content_size;
+	int_list_t* pending_lock_fds;
+} evicted_file_t;
 
 /**
  * @struct              client_t
@@ -294,6 +313,88 @@ static int cmp_file(void* a, void* b) {
 		return 0;
 	file_t* f1 = a;
 	file_t* f2 = b;
+	return (strcmp(f1->path, f2->path) == 0);
+}
+
+/**
+ * @function      init_evicted_file()
+ * @brief         Inizializza una struttura che rappresenta un file espulso dallo storage e ritorna un puntatore ad essa.
+ *
+ * @param file    Il file dello storage che è stato espulso
+ *
+ * @return        Un puntatore a una struttura che rappresenta un file espulso in caso di successo,
+ *                NULL in caso di fallimento con errno settato ad indicare l'errore.
+ *                In caso di fallimento errno può assumere i seguenti valori:
+ *                EINVAL se file è @c NULL
+ * @note          Errno viene settato se si verificano errori in malloc().
+ */
+static evicted_file_t* init_evicted_file(file_t* file) {
+	if (file == NULL) {
+		errno = EINVAL;
+		return NULL;
+	}
+	evicted_file_t* evicted_file = malloc(sizeof(evicted_file_t));
+	if (!evicted_file)
+		return NULL;
+	size_t path_size = strlen(file->path)+1;
+	char* file_path = calloc(path_size, sizeof(char));
+	if (!file_path) {
+		free(evicted_file);
+		return NULL;
+	}
+	strcpy(file_path, file->path);
+
+	evicted_file->path_size = path_size;
+	evicted_file->path = file_path;
+
+	evicted_file->content_size = file->content_size;
+	evicted_file->content = file->content;
+	// setto a NULL il campo content di file per evitare che venga deallocato più volte
+	file->content = NULL;
+
+	evicted_file->pending_lock_fds = file->pending_lock_fds;
+	// setto a NULL il campo pending_locks di file per evitare che venga deallocato più volte
+	file->pending_lock_fds = NULL;
+
+	return evicted_file;
+}
+
+/**
+ * @function              destroy_evicted_file()
+ * @brief                 Distrugge la struttura che rappresenta un file espulso dallo storage deallocando la memoria
+ *
+ * @param evicted_file    Il puntatore alla struttura che rappresenta un file espulso
+ */
+static void destroy_evicted_file(evicted_file_t* evicted_file) {
+	if (!evicted_file)
+		return;
+	if (evicted_file->path)
+		free(evicted_file->path);
+	if (evicted_file->content)
+		free(evicted_file->content);
+	if (evicted_file->pending_lock_fds)
+		int_list_destroy(evicted_file->pending_lock_fds);
+	free(evicted_file);
+	evicted_file = NULL;
+}
+
+/**
+ * @function   cmp_evicted_file()
+ * @brief      Confronta due strutture che rappresentano file espulsi dallo storage.
+ *             Essi sono uguali se il loro path è uguale.
+ *
+ * @param a    Primo oggetto da confrontare
+ * @param b    Secondo oggetto da confrontare
+ *
+ * @return     1 se gli oggetti sono uguali, 0 altrimenti.
+ */
+static int cmp_evicted_file(void* a, void* b) {
+	if (!a && ! b)
+		return 1;
+	else if (!a || !b)
+		return 0;
+	evicted_file_t* f1 = a;
+	evicted_file_t* f2 = b;
 	return (strcmp(f1->path, f2->path) == 0);
 }
 
@@ -776,6 +877,125 @@ static void notify_clients_file_not_exists(storage_t* storage,
 		else
 			EQM1_DO(writen(master_fd, &fd, sizeof(int)), r, EXTF);
 	}
+}
+
+/**
+ * @function             evict_file()
+ * @brief                Espelle un file dallo storage.
+ * @warning              Questa funzione deve essere invocata dopo aver acquisito la lock sullo storage.
+ * 
+ * @param storage        Oggetto storage
+ * @param path_needed    Path del file che non deve essere espulso, 
+ *                       NULL se tutti i file possono essere espulsi
+ * 
+ * @return               Il file espulso in caso di successo,
+ *                       NULL nel caso in cui non è stato possibile espellere alcun file.
+ */
+static evicted_file_t* evict_file(storage_t* storage, char* path_needed) {
+	int r;
+
+	// file vittima selezionato
+	file_t* victim = NULL;
+	file_t* file;
+	// settato a true nel caso in cui almeno il contatore di un file ha ragguinto il valore massimo
+	bool usage_counter_overflow = false;
+	// timestamp minimo per effettuare i confronti
+	struct timespec min_usage_time = {0, 0};
+
+	switch (storage->eviction_policy) {
+		case FIFO: {
+			// itero sui file dello storage
+			list_for_each(storage->files_queue, file) {
+				EQM1_DO(conc_hasht_lock(storage->files_ht, file->path), r, EXTF);
+				// controllo se il file può essere espulso
+				if (path_needed == NULL || 
+					(file->content_size != 0 && strcmp(file->path, path_needed) != 0)) {
+					EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
+					victim = file;
+					break;
+				}
+				EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
+			}
+			break;
+		}
+		case LFU:
+		case LW: {
+			int min_usage_counter = INT_MAX;
+			// itero sui file dello storage
+			list_for_each(storage->files_queue, file) {
+				EQM1_DO(conc_hasht_lock(storage->files_ht, file->path), r, EXTF);
+				if (min_usage_time.tv_sec == 0) {
+					// inizializzo il timestamp minimo
+					min_usage_time = file->last_usage_time;
+					min_usage_time.tv_sec += 1;
+				}
+				// controllo se il file può essere espulso
+				if (path_needed == NULL || 
+					(file->content_size != 0 && strcmp(file->path, path_needed) != 0)) {
+					// a parità di utilizzi valuto il tempo di ultimo riferimento
+					if (file->usage_counter < min_usage_counter || 
+						(file->usage_counter == min_usage_counter && 
+							timespeccmp(&file->last_usage_time, &min_usage_time, <))) {
+						min_usage_counter = file->usage_counter;
+						min_usage_time = file->last_usage_time;
+						victim = file;
+					}
+				}
+				if (file->usage_counter == INT_MAX)
+					usage_counter_overflow = true;
+				EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
+			}
+			break;
+		}
+		case LRU: {
+			// itero sui file dello storage
+			list_for_each(storage->files_queue, file) {
+				EQM1_DO(conc_hasht_lock(storage->files_ht, file->path), r, EXTF);
+				if (min_usage_time.tv_sec == 0) {
+					// inizializzo il timestamp minimo
+					min_usage_time = file->last_usage_time;
+					min_usage_time.tv_sec += 1;
+				}
+				// controllo se il file può essere espulso
+				if (path_needed == NULL || 
+					(file->content_size != 0 && strcmp(file->path, path_needed) != 0)) {
+					// controllo se il tempo di ultimo utilizzo del file è minore del minimo
+					if (timespeccmp(&file->last_usage_time, &min_usage_time, <)) {
+						min_usage_time = file->last_usage_time;
+						victim = file;
+					}
+				}
+				EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
+			}
+			break;
+		}
+		default: ; // caso mai verificato
+	}
+	if (usage_counter_overflow) {
+		// itero sui file dello storage
+		list_for_each(storage->files_queue, file) {
+			// ridimensiono il contatore degli utilizzi del file
+			file->usage_counter = file->usage_counter * RESIZE_OVERFLOW_FACTOR;
+		}
+	}
+
+	if (victim == NULL) // non dovrebbe mai accadere
+		return NULL;
+
+	EQM1_DO(conc_hasht_lock(storage->files_ht, victim->path), r, EXTF);
+
+	// creo un oggetto evicted_file
+	evicted_file_t* evicted_file = NULL;
+	EQNULL_DO(init_evicted_file(victim), evicted_file, EXTF);
+
+	// elimino il file
+	delete_file_from_storage(storage, victim);
+
+	EQM1_DO(conc_hasht_unlock(storage->files_ht, evicted_file->path), r, EXTF);
+
+	(storage->evicted_files) ++;
+
+	return evicted_file;
 }
 
 request_t* read_request(storage_t* storage, int master_fd, int client_fd, int worker_id) {

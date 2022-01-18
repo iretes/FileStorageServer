@@ -9,6 +9,53 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/time.h>
+
+
+/**
+ * @def         timespecsub()
+ * @brief       Sottrae tsp a usp e memorizza il risultato in vsp.
+ * 
+ * @param tsp   Puntatore a timespec minuendo
+ * @param usp   Puntatore a timespec sottraendo
+ * @param vsp   Puntatore a timespec differenza
+ */
+#ifndef timespecsub
+#define	timespecsub(tsp, usp, vsp) \
+	do { \
+		(vsp)->tv_sec = (tsp)->tv_sec - (usp)->tv_sec; \
+		(vsp)->tv_nsec = (tsp)->tv_nsec - (usp)->tv_nsec; \
+		if ((vsp)->tv_nsec < 0) { \
+			(vsp)->tv_sec--; \
+			(vsp)->tv_nsec += 1000000000L; \
+		} \
+	} while (0)
+#endif
+
+/**
+ * @def         timespecmp()
+ * @brief       Paragona tsp a usp con l'operando cmp.
+ * 
+ * @param tsp   Puntatore al primo termine timespec
+ * @param usp   Puntatore al secondo termine timespec
+ * @param cmp   Operando di paragone (uno tra < | <= | == | != | >= | >)
+ */
+#ifndef timespeccmp
+#define	timespeccmp(tsp, usp, cmp) \
+	(((tsp)->tv_sec == (usp)->tv_sec) ? \
+		((tsp)->tv_nsec cmp (usp)->tv_nsec) : \
+		((tsp)->tv_sec cmp (usp)->tv_sec))
+#endif
+
+/**
+ * @def     TIMESPEC_TO_MILLIS()
+ * @brief   Converte in millisecondi timespec.
+ * 
+ * @param t Puntatore a timespec
+ * @param l Long in cui memorizzare i millisecondi
+ */
+#define TIMESPEC_TO_MILLIS(t, l) \
+	l = ((t)->tv_sec)*1000 + lround(((t)->tv_nsec)/1e6); 
 
 /**
  * @def      EXTF
