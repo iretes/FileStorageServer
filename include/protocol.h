@@ -10,6 +10,11 @@
 #define DEFAULT_SOCKET_PATH "./storage_socket"
 
 /**
+ * Massima dimensione del path del socket file
+ */
+#define UNIX_PATH_MAX 108
+
+/**
  * @enum	request_code_t
  * @brief	Codici di richiesta.
  */ 

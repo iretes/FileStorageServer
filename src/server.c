@@ -25,11 +25,6 @@
 #endif
 
 /**
- * Massima dimensione del path del socket file
- */
-#define UNIX_PATH_MAX 108
-
-/**
  * @struct           task_args_t
  * @brief            Struttura che raccoglie gli argomenti di un task che un worker dovrà servire
  * 
@@ -276,7 +271,7 @@ static void usage(char* prog) {
 	"Se l'opzione -c non viene specificata verrà utilizzato il file di configurazione '%s'.\n"
 	"Il file di configurazione deve avere il seguente formato:\n\n"
 	"# Questo è un commento (linea che inizia con '#').\n", DEFAULT_CONFIG_PATH);
-	printf("# Le linee che presentano solo caratteri di spaziatura verrano anch'esse ignorate.\n");
+	printf("# Le linee vuote o che presentano solo caratteri di spaziatura verrano anch'esse ignorate.\n");
 	printf("# Le linee possono essere al più lunghe %d caratteri.\n", CONFIG_LINE_SIZE);
 	printf("# Una linea può contenere una coppia chiave-valore, separati da '=' e terminante con ';'.\n");
 	printf("# Sono ammessi caratteri di spaziatura solo dopo ';'.\n");
@@ -294,7 +289,7 @@ static void usage(char* prog) {
 	printf("%s=n;\n\n", MAX_FILE_NUM_STR);
 	printf("# Numero massimo di bytes che possono essere memorizzati nello storage\n");
 	printf("# (n intero, 0 < n <= %zu [circa %.0f MB], se non specificato = %u)\n", 
-	SIZE_MAX, (double) SIZE_MAX / 1000000, DEFAULT_MAX_BYTES);
+	SIZE_MAX, (double) SIZE_MAX / BYTES_IN_A_MEGABYTE, DEFAULT_MAX_BYTES);
 	printf("%s=n;\n\n", MAX_BYTES_STR);
 	printf("# Numero massimo di lock che possono essere associate ai files\n");
 	printf("# (n intero, 0 < n <= %zu, se non specificato = %u)\n", 
@@ -311,10 +306,11 @@ static void usage(char* prog) {
 	printf("# (ad ogni esecuzione se già esiste viene sovrascritto, se non specificato = %s)\n", DEFAULT_LOG_PATH);
 	printf("%s=path;\n\n", LOG_FILE_STR);
 	printf("# Politica di espulsione dei file\n");
-	printf("# (policy può assumere uno tra i seguenti valori %s|%s|%s, se non specificato = %s)\n", 
+	printf("# (policy può assumere uno tra i seguenti valori %s|%s|%s|%s, se non specificato = %s)\n", 
 	eviction_policy_to_str(FIFO),
 	eviction_policy_to_str(LRU),
 	eviction_policy_to_str(LFU),
+	eviction_policy_to_str(LW),
 	eviction_policy_to_str(DEFAULT_EVICTION_POLICY));
 	printf("%s=policy;\n", EVICTION_POLICY_STR);
 }
@@ -424,7 +420,7 @@ int main(int argc, char *argv[]) {
 	unlink(config->socket_path); // rimuovo il socket se già esistente
 	EQM1_DO(bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)), r, extval = EXIT_FAILURE; goto server_exit);
 	EQM1_DO(listen(listenfd, MAXBACKLOG), r, EXTF);
-	
+
 	// creo il threadpool
 	threadpool_t *pool = NULL;
 	EQNULL_DO(threadpool_create(config->n_workers, config->dim_workers_queue), pool, EXTF);
@@ -450,7 +446,7 @@ int main(int argc, char *argv[]) {
 	FD_SET(workers_pipe[0], &set);
 	int fdmax = (listenfd > signal_pipe[0]) ? listenfd : signal_pipe[0];
 	fdmax = (workers_pipe[0] > fdmax) ? workers_pipe[0] : fdmax;
-	
+
 	// numero di clienti connessi
 	int connected_clients = 0;
 
@@ -490,7 +486,7 @@ int main(int argc, char *argv[]) {
 				}
 				if (is_flag_setted(sig_mutex, shut_down))
 					continue;
-				
+
 				EQM1_DO(client_fd = accept(listenfd, (struct sockaddr*)NULL ,NULL), r, EXTF);
 				FD_SET(client_fd, &set);
 				if (client_fd > fdmax)
