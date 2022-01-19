@@ -18,7 +18,8 @@ TARGETS	= $(BINDIR)/client $(BINDIR)/server
 
 all: $(TARGETS)
 
-CLIENTOBJS = $(OBJDIR)/client.o $(OBJDIR)/client_api.o
+CLIENTOBJS = $(OBJDIR)/client.o $(OBJDIR)/client_api.o $(OBJDIR)/cmdline_operation.o $(OBJDIR)/cmdline_parser.o \
+$(OBJDIR)/list.o $(OBJDIR)/util.o
 SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o \
 $(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o $(OBJDIR)/threadpool.o $(OBJDIR)/logger.o \
 $(OBJDIR)/storage_server.o $(OBJDIR)/protocol.o
@@ -36,7 +37,12 @@ $(OBJDIR)/server.o: $(SRCDIR)/server.c $(INCDIR)/hasht.h $(INCDIR)/conc_hasht.h 
 $(INCDIR)/eviction_policy.h $(INCDIR)/config_parser.h $(INCDIR)/util.h $(INCDIR)/protocol.h $(INCDIR)/threadpool.h \
 $(INCDIR)/logger.h $(INCDIR)/log_format.h $(INCDIR)/storage_server.h
 
-$(OBJDIR)/client.o: $(SRCDIR)/client.c
+$(OBJDIR)/client.o: $(SRCDIR)/client.c $(INCDIR)/client_api.h $(INCDIR)/cmdline_operation.h $(INCDIR)/cmdline_parser.h
+
+$(OBJDIR)/cmdline_operation.o: $(SRCDIR)/cmdline_operation.c $(INCDIR)/cmdline_operation.h $(INCDIR)/list.h
+
+$(OBJDIR)/cmdline_parser.o: $(SRCDIR)/cmdline_parser.c $(INCDIR)/cmdline_parser.h $(INCDIR)/client_api.h \
+$(INCDIR)/cmdline_operation.h $(INCDIR)/list.h $(INCDIR)/protocol.h $(INCDIR)/util.h
 
 $(OBJDIR)/hasht.o: $(SRCDIR)/hasht.c $(INCDIR)/hasht.h
 
