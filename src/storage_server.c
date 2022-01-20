@@ -935,7 +935,7 @@ static evicted_file_t* evict_file(storage_t* storage, char* path_needed) {
 					// a parità di utilizzi valuto il tempo di ultimo riferimento
 					if (file->usage_counter < min_usage_counter || 
 						(file->usage_counter == min_usage_counter && 
-							timespeccmp(&file->last_usage_time, &min_usage_time, <))) {
+							timespeccmp(&file->last_usage_time, &min_usage_time, <=))) {
 						min_usage_counter = file->usage_counter;
 						min_usage_time = file->last_usage_time;
 						victim = file;

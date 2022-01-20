@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include <client_api.h>
 #include <protocol.h>
@@ -22,8 +23,26 @@ bool print_enable = false;
 
 char* errno_to_str(int err) {
 	switch (err) {
+		case EBADRQC:
+			return "Operazione non riconosciuta";
+		case ENAMETOOLONG:
+			return "Path del file troppo lungo";
+		case EFBIG:
+			return "File troppo grande";
+		case EBADF:
+			return "Path del file non valido";
+		case EEXIST:
+			return "File già esistente";
+		case ENOENT:
+			return "File inesistente";
 		case EALREADY:
 			return "Operazione già effettuata";
+		case EPERM:
+			return "Operazione non consentita";
+		case EBUSY:
+			return "Server occupato";
+		case EPROTO:
+			return "Errore di protocollo";
 		case EINVAL:
 			return "Argomenti non validi";
 		case ECOMM:
@@ -32,13 +51,176 @@ char* errno_to_str(int err) {
 			return "Ricezione di interruzione";
 		case ETIMEDOUT:
 			return "Tempo scaduto";
+		case ECONNRESET:
+			return "Reset della connessione";
 		case EISCONN:
 			return "Connessione già effettuata";
+		case EFAULT:
+			return "Non tutti i file ricevuti sono stati scritti su disco";
 		case 0:
 			return "OK";
 		default:
 			return NULL;
 	}
+}
+
+/**
+ * @function      set_errno()
+ * @brief         Setta errno in base al codice di risposta ricevuto
+ * 
+ * @param code    Il codice di rispsota ricevuto dal server
+ */
+static void set_errno(response_code_t code) {
+	switch (code) {
+		case NOT_RECOGNIZED_OP:
+			errno = EBADRQC;
+			break;
+		case TOO_LONG_PATH:
+			errno = ENAMETOOLONG;
+			break;
+		case TOO_LONG_CONTENT:
+			errno = EFBIG;
+			break;
+		case INVALID_PATH:
+			errno = EBADF;
+			break;
+		case FILE_ALREADY_EXISTS:
+			errno = EEXIST;
+			break;
+		case FILE_NOT_EXISTS:
+			errno = ENOENT;
+			break;
+		case FILE_ALREADY_OPEN:
+		case FILE_ALREADY_LOCKED:
+			errno = EALREADY;
+			break;
+		case OPERATION_NOT_PERMITTED:
+		case COULD_NOT_EVICT:
+			errno = EPERM;
+			break;
+		case TEMPORARILY_UNAVAILABLE:
+			errno = EBUSY;
+			break;
+		case OK:
+			errno = 0;
+			break;
+		default:
+			errno = EPROTO;
+	}
+}
+
+/**
+ * @function      send_reqcode()
+ * @brief         Invia al server il codice di richiesta code
+ * 
+ * @param code    Il codice di richiesta da inviare al server
+ * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                In caso di fallimento errno può assumere i seguenti valori:
+ *                ECOMM       se si è verificato un errore lato client durante la scrittura sulla socket
+ *                ECONNRESET  se il server ha chiuso la connessione
+ */
+static int send_reqcode(request_code_t code) {
+	int r;
+	r = writen(g_socket_fd, &code, sizeof(request_code_t));
+	if (r == -1 || r == 0) {
+		if (errno == EPIPE)
+			errno = ECONNRESET;
+		else
+			errno = ECOMM;
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * @function          send_pathname()
+ * @brief             Invia al server il path di un file
+ * 
+ * @param pathname    Path del file da inviare al server
+ * @return            0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                    In caso di fallimento errno può assumere i seguenti valori:
+ *                    ECOMM         se si è verificato un errore lato client durante la scrittura sulla socket
+ *                    ECONNRESET    se il server ha chiuso la connessione
+ */
+static int send_pathname(const char* pathname) {
+	size_t pathname_len = strlen(pathname) + 1;
+	int r;
+	// invio al server la dimensione del path del file
+	r = writen(g_socket_fd, &pathname_len, sizeof(size_t));
+	// in caso di successo invio il path del file
+	if (r != -1 && r != 0) {
+		r = writen(g_socket_fd, (void*)pathname, pathname_len*sizeof(char));
+	}
+	if (r == -1 || r == 0) {
+		if (errno == EPIPE)
+			errno = ECONNRESET;
+		else
+			errno = ECOMM;
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * @function      receive_respcode()
+ * @brief         Riceve dal server il codice di risposta
+ * 
+ * @param code    Codice di risposta ricevuto
+ * 
+ * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                In caso di fallimento errno può assumere i seguenti valori:
+ *                ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
+ *                ECONNRESET   se il server ha chiuso la connessione
+ */
+static int receive_respcode(response_code_t* code) {
+	int r;
+	r = readn(g_socket_fd, code, sizeof(response_code_t));
+	if (r == 0) {
+		errno = ECONNRESET;
+		return -1;
+	}
+	else if (r == -1) {
+		if (errno != ECONNRESET)
+			errno = ECOMM;
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * @function          do_simple_request()
+ * @brief             Invia al server il codice di richiesta req_code e il path del file relativo alla richiesta,
+ *                    attende la ricezione del codice di risposta e setta errno in base al codice ricevuto.
+ * 
+ * @param req_code    Codice di richiesta da inviare
+ * @param pathname    Path del file da inviare
+ * 
+ * @return            0 in caso di successo, -1 in caso di fallimento.
+ *                    Errno viene settato nel caso in cui si sono verificati errori che non hanno reso possibile completare 
+ *                    l'operazione e nel caso in cui la risposta ricevuta dal server segnala l'esito negativo dell'operazione 
+ *                    richiesta.
+ *                    Errno può assumere i seguenti valori:
+ *                    ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
+ *                    ECONNRESET    se il server ha chiuso la connessione
+ */
+static int do_simple_request(request_code_t req_code, const char* pathname) {
+	// invio al server il codice di richiesta
+	if (send_reqcode(req_code) == -1)
+		return -1;
+
+	// invio al server il path del file
+	if (send_pathname(pathname) == -1)
+		return -1;
+
+	// ricevo dal server il codice di risposta
+	response_code_t resp_code;
+	if (receive_respcode(&resp_code) == -1)
+		return -1;
+	
+	// setto errno in base al codice di risposta ricevuto
+	set_errno(resp_code);
+
+	return 0;
 }
 
 int enable_printing() {
@@ -171,5 +353,120 @@ int closeConnection(const char* sockname) {
 	g_socket_fd = -1;
 	g_sockname[0] = '\0';
 
+	return 0;
+}
+
+int openFile(const char* pathname, int flags) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		pathname != strchr(pathname, '/') ||strchr(pathname, ',') != NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+	// setto il codice di richiesta da inviare al server in base al valore di flags
+	request_code_t req_code;
+	switch (flags) {
+		case O_CREATE:
+			req_code = OPEN_CREATE;
+			break;
+		case O_LOCK:
+			req_code = OPEN_LOCK;
+			break;
+		case 0:
+			req_code = OPEN_NO_FLAGS;
+			break;
+		case O_CREATE|O_LOCK:
+			req_code = OPEN_CREATE_LOCK;
+			break;
+		default:
+			errno = EINVAL;
+			return -1;
+	}
+
+	if (do_simple_request(req_code, pathname) == -1 || errno != 0)
+		return -1;
+	return 0;
+}
+
+int lockFile(const char* pathname) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+	
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	request_code_t req_code = LOCK;
+	if (do_simple_request(req_code, pathname) == -1 || (errno != 0 && errno != EALREADY))
+		return -1;
+	if (errno == EALREADY)
+		errno = 0;
+	return 0;
+}
+
+int unlockFile(const char* pathname) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	request_code_t req_code = UNLOCK;
+	if (do_simple_request(req_code, pathname) == -1 || errno != 0)
+		return -1;
+	return 0;
+}
+
+int closeFile(const char* pathname) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	request_code_t req_code = CLOSE;
+	if (do_simple_request(req_code, pathname) == -1 || errno != 0)
+		return -1;
+	return 0;
+}
+
+int removeFile(const char* pathname) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	request_code_t req_code = REMOVE;
+	if (do_simple_request(req_code, pathname) == -1 || errno != 0)
+		return -1;
 	return 0;
 }
