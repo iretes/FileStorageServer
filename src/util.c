@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <util.h>
 
@@ -64,4 +65,24 @@ int is_number(const char* s, long* n) {
 		return 0;
 	}
 	return 1; // non e' un numero
+}
+
+int millisleep(long ms) {
+	int err;
+	struct timespec towait = {0, 0}, remaining = {0, 0};
+
+	if (ms <= 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	towait.tv_sec = ms / 1000;
+	towait.tv_nsec = (ms % 1000) * 1000000;
+
+	do {
+		err = nanosleep(&towait, &remaining);
+		towait = remaining;
+	} while (err != 0 && errno == EINTR); // proseguo in caso di ricezione di interruzione
+
+	return err;
 }

@@ -19,7 +19,7 @@ TARGETS	= $(BINDIR)/client $(BINDIR)/server
 all: $(TARGETS)
 
 CLIENTOBJS = $(OBJDIR)/client.o $(OBJDIR)/client_api.o $(OBJDIR)/cmdline_operation.o $(OBJDIR)/cmdline_parser.o \
-$(OBJDIR)/list.o $(OBJDIR)/util.o
+$(OBJDIR)/list.o $(OBJDIR)/util.o $(OBJDIR)/filesys_util.o
 SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o \
 $(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o $(OBJDIR)/threadpool.o $(OBJDIR)/logger.o \
 $(OBJDIR)/storage_server.o $(OBJDIR)/protocol.o
@@ -68,6 +68,8 @@ $(OBJDIR)/storage_server.o: $(SRCDIR)/storage_server.c $(INCDIR)/storage_server.
 $(OBJDIR)/protocol.o: $(SRCDIR)/protocol.c $(INCDIR)/protocol.h
 
 $(OBJDIR)/client_api.o: $(SRCDIR)/client_api.c $(INCDIR)/client_api.h $(INCDIR)/protocol.h
+
+$(OBJDIR)/filesys_util.o: $(SRCDIR)/filesys_util.c $(INCDIR)/filesys_util.h
 
 clean: 
 	@rm -f $(TARGETS)

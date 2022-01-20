@@ -8,12 +8,224 @@
 #include <cmdline_operation.h>
 #include <cmdline_parser.h>
 #include <list.h>
-
+#include <filesys_util.h>
+#include <util.h>
 
 /** Secondi da dedicare ai tentativi di connessione verso il server */
 #define TRY_CONN_FOR_SEC 5
 /** Millisecondi da attendere tra un tentativo di connessione verso il server e il successivo */
 #define RETRY_CONN_AFTER_MSEC 1000
+/** Massimo numero di richieste da effettuare nel caso in cui il server risponda che è troppo occupato */
+#define MAX_REQ_TRIES 3
+/** Millisecondi da attendere tra una richiesta fallita perchè il server è troppo occupato e il tentativo di richiesta 
+ * successivo*/
+#define RETRY_REQ_AFTER_MSEC 1000
+
+/**
+ * @def          RETRY_IF_BUSY()
+ * @brief        Tenta al più MAX_REQ_TRIES volte la chiamata dell'api X nel caso in cui il server sia occupato.
+ * 
+ * @param X      La chiamata dell'api
+ * @param ret    Il valore ritornato da X
+ */
+#define RETRY_IF_BUSY(X, ret) \
+	do { \
+		int try = 0; \
+		bool sleep_fail = 0; \
+		while ((ret = (X)) == -1 && errno == EBUSY) { \
+			try ++; \
+			if (try >= MAX_REQ_TRIES) break; \
+			PRINT(" : %s", errno_to_str(errno)); \
+			if (millisleep(RETRY_REQ_AFTER_MSEC) == -1)  { \
+				fprintf(stderr, "\nERR: millisleep (%s)\n", strerror(errno)); \
+				sleep_fail = 1; \
+				errno = EBUSY; \
+				break; \
+			} \
+		} \
+		if (!sleep_fail) \
+			PRINT(" : %s", ret == -1 ? errno_to_str(errno) : "OK"); \
+	} while(0);
+
+/**
+ * @function     should_exit()
+ * @brief        Consente di stabilire in base al codice di errore err settato nella api se il processo deve terminare o può 
+ *               proseguire l'esecuzione
+ * 
+ * @param err    Codice di errore
+ * @return       True se il processo deve terminare l'esecuzione, false atrimenti
+ */
+static inline bool should_exit(int err) {
+	if (errno == ECONNRESET || errno == ECOMM || errno == EBUSY)
+		return true;
+	return false;
+}
+
+/**
+ * @function                   lock_file_list()
+ * @brief                      Esegue l'operazione 'l'.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+int lock_file_list(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation || !cmdline_operation->files) {
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'", __func__);
+		return 1;
+	}
+
+	char* filepath;
+	// itero sui file su cui acquisire la lock
+	list_for_each(cmdline_operation->files, filepath) {
+		// ottengo il path assoluto del file
+		char* abspath = get_absolute_path(filepath);
+		if (!abspath) {
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)", 
+				filepath, strerror(errno));
+			if (errno == ENOMEM) return -1;
+			continue;
+		}
+
+		// invoco la funzione dell'api per aprire il file
+		int ret, errnosv;
+		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
+		RETRY_IF_BUSY(openFile(abspath, 0), ret);
+		if (ret == -1 && errno != EALREADY) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		// invoco la funzione dell'api per acquisire la lock sul file
+		PRINT("\nlockFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(lockFile(abspath), ret);
+		if (ret == -1) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+		free(abspath);
+	}
+	return 0;
+}
+
+/**
+ * @function                   unlock_file_list()
+ * @brief                      Esegue l'operazione 'u'.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+int unlock_file_list(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation || !cmdline_operation->files) {
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'", __func__);
+		return 1;
+	}
+	
+	char* filepath;
+	// itero sui file su cui rilasciare la lock
+	list_for_each(cmdline_operation->files, filepath) {
+		// ottengo il path assoluto del file
+		char* abspath = get_absolute_path(filepath);
+		if (!abspath) {
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)", 
+				filepath, strerror(errno));
+			if (errno == ENOMEM) return -1;
+			continue;
+		}
+
+		// invoco la funzione dell'api per rilasciare la lock sul file
+		int ret, errnosv;
+		PRINT("\nunlockFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(unlockFile(abspath), ret);
+		if (ret == -1) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+		free(abspath);
+	}
+	return 0;
+}
+
+/**
+ * @function                   remove_file_list()
+ * @brief                      Esegue l'operazione 'c'.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+int remove_file_list(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation || !cmdline_operation->files) {
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'", __func__);
+		return 1;
+	}
+	
+	char* filepath;
+	// itero sui file da rimuovere
+	list_for_each(cmdline_operation->files, filepath) {
+		// ottengo il path assoluto del file
+		char* abspath = get_absolute_path(filepath);
+		if (!abspath) {
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)", 
+				filepath, strerror(errno));
+			if (errno == ENOMEM) return -1;
+			continue;
+		}
+
+		// invoco la funzione dell'api per aprire il file
+		int ret, errnosv;
+		PRINT("\nopenFile(pathname = %s, flags = O_LOCK)", abspath);
+		RETRY_IF_BUSY(openFile(abspath, O_LOCK), ret);
+		// se il file è già aperto invoco la funzione dell'api per acquisire la lock sul file
+		if (ret == -1 && errno == EALREADY) {
+			PRINT("\nlockFile(pathname = %s)", abspath);
+			RETRY_IF_BUSY(lockFile(abspath), ret);
+			if (ret == -1) { 
+				errnosv = errno;
+				free(abspath);
+				if (errnosv == EBADRQC) return 1;
+				else if (should_exit(errnosv)) return -1;
+				else continue;
+			}
+		}
+		else if (ret == -1) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		// invoco la funzione dell'api per rimuovere il file
+		PRINT("\nremoveFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(removeFile(abspath), ret);
+		if (ret == -1) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+		free(abspath);
+	}
+	return 0;
+}
 
 int main(int argc, char* argv[]) {
 	int r;
@@ -85,6 +297,35 @@ int main(int argc, char* argv[]) {
 		PRINT("\n");
 		extval = EXIT_FAILURE;
 		goto exit;
+	}
+
+	// itero sulle operazioni specificate dalla linea di comando e le eseguo
+	list_for_each(cmdline_operation_list, cmdline_operation) {
+		switch (cmdline_operation->operation) {
+			case 'w':
+			case 'W':
+			case 'a':
+			case 'r':
+			case 'R':
+			case 'l':
+				r = lock_file_list(cmdline_operation);
+				break;
+			case 'u':
+				r = unlock_file_list(cmdline_operation);
+				break;
+			case 'c':
+				r = remove_file_list(cmdline_operation);
+				break;
+		}
+		if (r == -1) break;
+		/* se è stata specificata l'opzione -t attendo per il tempo specificato prima di inviare l'eventuale 
+		   richiesta successiva */
+		if (cmdline_operation->time > 0) {
+			if (millisleep(cmdline_operation->time) == -1) {
+				fprintf(stderr, "\nERR: millisleep (%s)", strerror(errno));
+			}
+		}
+		errno = 0;
 	}
 	
 	// invoco la funzione della api per la chiusura della connessione con il server

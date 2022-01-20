@@ -469,4 +469,18 @@ int writen(long fd, void *buf, size_t size);
  */
 int is_number(const char* s, long* n);
 
+/**
+ * @function    millisleep()
+ * @brief       Effettua una sleep per per ms millisecondi.
+ * 
+ * @param ms    Millisecondi in cui effettuare la sleep
+ * 
+ * @return      0 in caso di successo,
+ *              -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *              In caso di fallimento errno può assumere i seguenti valori:
+ *              EINVAL se ms è <=
+ * @note        Può fallire e settare errno se si verificano gli errori specificati da nanosleep().
+ */
+int millisleep(const long ms);
+
 #endif /* UTIL_H */
