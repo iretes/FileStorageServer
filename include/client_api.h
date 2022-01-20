@@ -136,6 +136,33 @@ int closeConnection(const char* sockname);
  */
 int openFile(const char* pathname, int flags);
 
+/**
+ * @function readFile()
+ * @brief             Legge tutto il contenuto del file dal server (se esiste) ritornando un puntatore ad un'area allocata 
+ *                    sullo heap nel parametro buf, mentre size conterrà la dimensione del buffer dati (ossia la dimensione 
+ *                    in bytes del file letto). In caso di errore, buf e size non sono validi.
+ *
+ * @param pathname    Il path del file relativo alla richiesta di lettura
+ * @param buf         Il buffer in cui memorizzare il contenuto del file ricevuto dal server
+ * @param sie         La size del buffer buf
+ * 
+ * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ *                    In caso di fallimento errno può assumere i seguenti valori:
+ *                    EBADF         se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY         se il server ha risposto di essere troppo occupato
+ *                    ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                  l'operazione
+ *                    ECONNRESET    se il server ha chiuso la connessione
+ *                    EINVAL        se pathname è @c NULL o è lungo 0 o > PATH_MAX, se pathname non è un path assoluto o 
+ *                                  se contiene ',', 
+ *                                  se buf è @c NULL o se size è @c NULL
+ *                    ENAMETOOLONG  se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT        se il server ha risposto che il file non esiste
+ *                    EPERM         se il server ha risposto che l'operazioe sul file non è consentita 
+ *                                  (il client non ha precedentemente aperto il file o il file è bloccato da un altro client)
+ *                    EPROTO        se si sono verificati errori di protocollo
+ */
 int readFile(const char* pathname, void** buf, size_t* size);
 
 int readNFiles(int N, const char* dirname);

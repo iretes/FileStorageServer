@@ -188,6 +188,76 @@ static int receive_respcode(response_code_t* code) {
 }
 
 /**
+ * @function      receive_size()
+ * @brief         Riceve dal server il valore di un size_t
+ * 
+ * @param size    size_t ricevuto
+ * 
+ * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                In caso di fallimento errno può assumere i seguenti valori:
+ *                ECOMM         se si è verificato un errore lato client durante la scrittura sulla socket
+ *                ECONNRESET    se il server ha chiuso la connessione
+ */
+static int receive_size(size_t* size) {
+	int r;
+	r = readn(g_socket_fd, size, sizeof(size_t));
+	if (r == 0) {
+		errno = ECONNRESET;
+		return -1;
+	}
+	else if (r == -1) {
+		if (errno != ECONNRESET)
+			errno = ECOMM;
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * @function      receive_file_content()
+ * @brief         Riceve dal server il contenuto di un file
+ * 
+ * @param buf     Contenuto del file ricevuto
+ * @param size    Dimensione del contenuto del file ricevuto
+ * 
+ * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                In caso di fallimento errno può assumere i seguenti valori:
+ *                ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
+ *                ECONNRESET    se il server ha chiuso la connessione
+ */
+static int receive_file_content(void** buf, size_t* size) {
+	int r;
+	// ricevo dal server la dimensione del contenuto file
+	if (receive_size(size) == -1)
+		return -1;
+
+	// secondo il protocollo il server non invia 0
+	if (*size == 0)
+		return 0;
+
+	// alloco un buffer per leggere il contenuto del file
+	*buf = malloc(*size);
+	if (*buf == NULL) {
+		errno = ECOMM;
+		return -1;
+	} 
+	// leggo il contenuto del file
+	r = readn(g_socket_fd, *buf, *size);
+	if (r == 0) {
+		errno = ECONNRESET;
+		free(*buf);
+		return -1;
+	}
+	else if (r == -1) {
+		if (errno != ECONNRESET)
+			errno = ECOMM;
+		free(*buf);
+		return -1;
+	}
+	return 0;
+}
+
+/**
  * @function          do_simple_request()
  * @brief             Invia al server il codice di richiesta req_code e il path del file relativo alla richiesta,
  *                    attende la ricezione del codice di risposta e setta errno in base al codice ricevuto.
@@ -389,6 +459,30 @@ int openFile(const char* pathname, int flags) {
 	}
 
 	if (do_simple_request(req_code, pathname) == -1 || errno != 0)
+		return -1;
+	return 0;
+}
+
+int readFile(const char* pathname, void** buf, size_t* size) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		strchr(pathname, ',') != NULL || pathname != strchr(pathname, '/') || 
+		!buf || !size) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	request_code_t req_code = READ;
+	if (do_simple_request(req_code, pathname) == -1 || errno != 0)
+		return -1;
+	
+	*buf = NULL;
+	if (receive_file_content(buf, size) == -1)
 		return -1;
 	return 0;
 }
