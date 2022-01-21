@@ -15,6 +15,7 @@
 #include <client_api.h>
 #include <protocol.h>
 #include <util.h>
+#include <filesys_util.h>
 
 /** File descriptor associato al socket */
 int g_socket_fd = -1;
@@ -162,6 +163,30 @@ static int send_pathname(const char* pathname) {
 }
 
 /**
+ * @function send_N()
+ * @brief      Invia al server il valore del parametro N
+ * 
+ * @param N    Intero da inviare al server
+ * 
+ * @return     0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *             In caso di fallimento errno può assumere i seguenti valori:
+ *             ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
+ *             ECONNRESET   se il server ha chiuso la connessione
+ */
+static int send_N(int N) {
+	int r;
+	r = writen(g_socket_fd, &N, sizeof(int));
+	if (r == -1 || r == 0) {
+		if (errno == EPIPE)
+			errno = ECONNRESET;
+		else
+			errno = ECOMM;
+		return -1;
+	} 
+	return 0;
+}
+
+/**
  * @function      receive_respcode()
  * @brief         Riceve dal server il codice di risposta
  * 
@@ -214,6 +239,54 @@ static int receive_size(size_t* size) {
 }
 
 /**
+ * @function          receive_pathname()
+ * @brief             Riceve dal server il path di un file
+ * 
+ * @param pathname    Path ricevuto
+ * @param size        Dimensione del path ricevuto
+ * 
+ * @return            0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                    In caso di fallimento errno può assumere i seguenti valori:
+ *                    ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
+ *                    ECONNRESET    se il server ha chiuso la connessione
+ *                    EPROTO        se si è verificato un errore di protocollo
+ */
+static int receive_pathname(char** pathname, size_t* size) {
+	int r;
+	// ricevo dal server la dimensione del path del file
+	if (receive_size(size) == -1)
+		return -1;
+	
+	// secondo il protocollo il server non invia 0
+	if (*size == 0) {
+		errno = EPROTO;
+		return -1;
+	}
+	
+	// alloco una stringa per memorizzare il path
+	*pathname = calloc((*size), sizeof(char));
+	if (*pathname == NULL) {
+		errno = ECOMM;
+		return -1;
+	} 
+
+	// leggo il path del file
+	r = readn(g_socket_fd, *pathname, (*size)*sizeof(char));
+	if (r == 0) {
+		errno = ECONNRESET;
+		free(*pathname);
+		return -1;
+	}
+	else if (r == -1) {
+		if (errno != ECONNRESET)
+			errno = ECOMM;
+		free(*pathname);
+		return -1;
+	}
+	return 0;
+}
+
+/**
  * @function      receive_file_content()
  * @brief         Riceve dal server il contenuto di un file
  * 
@@ -254,6 +327,105 @@ static int receive_file_content(void** buf, size_t* size) {
 		free(*buf);
 		return -1;
 	}
+	return 0;
+}
+
+/**
+ * @function               receive_files()
+ * @brief                  Riceve dal server dei file e li memorizza nella directory dirname ( se diversa da @c NULL )
+ * 
+ * @param dirname          La directory in cui memorizzare i file ricevuti, se @c NULL i file ricevuti non vengono memorizzati
+ * @param file_received    Il numero di file ricevuti
+ * 
+ * @return                 0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM       se si è verificato un errore lato client che non ha reso possibile effettuare 
+ *                                     l'operazione
+ *                         ECONNRESET  se il server ha chiuso la connessione
+ *                         EFAULT      se non è stato possibile scrivere tutti i file ricevuti
+ *                         EPROTO      se si è verificato un errore di protocollo
+ */
+static int receive_files(const char* dirname, int* num_file_received) {
+	// ricevo dal server il numero di file che intende inviare
+	size_t files_to_receive;
+	if (receive_size(&files_to_receive) == -1)
+		return -1;
+	
+	int errnosv = 0;
+	for (int i = 0; i < files_to_receive; i ++) {
+		size_t pathsize_in;
+		char* pathname_in;
+		size_t size_in;
+		void* buf_in = NULL;
+
+		// ricevo dal server il path del file
+		if (receive_pathname(&pathname_in, &pathsize_in) == -1)
+			return -1;
+
+		// ricevo dal server il contenuto del file
+		if (receive_file_content(&buf_in, &size_in) == -1)
+			return -1;
+
+		// incremento il numero di file ricevuti
+		if (num_file_received != NULL && *num_file_received != INT_MAX) // per evitare overflow
+			(*num_file_received) ++;
+
+		/* se dirnam è NULL stampo eventualmente sullo stdout il pathname e i byte ricevuti
+		   e proseguo con la ricezione dell'eventuale file successivo */
+		if (!dirname) {
+			PRINT(" : (%zu byte ricevuti di %s)", size_in, pathname_in);
+			free(buf_in);
+			free(pathname_in);
+			continue;
+		}
+
+		// ottengo il nome del file
+		char* filename = get_basename(pathname_in);
+		if (!filename) {
+			errno = ECOMM;
+			free(buf_in);
+			free(pathname_in);
+			return -1;
+		}
+
+		// costruisco il path del file concatenando il nome del file al path della directory in cui memorizzarlo
+		char* filepath = build_notexisting_path(dirname, filename);
+		if (!filepath) {
+			free(buf_in);
+			free(pathname_in);
+			free(filename);
+			if (errno == ENOMEM) {
+				errno = ECOMM;
+				return -1;
+			}
+			continue;
+		}
+
+		// scrivo nel file
+		FILE * file_in;
+		file_in = fopen(filepath, "w+");
+		if (!file_in) {
+			errnosv = EFAULT;
+		}
+		else {
+			if (size_in != 0) {
+				if (fwrite(buf_in, 1, size_in, file_in) != size_in)
+					errnosv = EFAULT;
+			}
+			if (errnosv != EFAULT) {
+				PRINT(" : (%zu byte ricevuti e salvati in %s)", size_in, filepath);
+			}
+		}
+		if (fclose(file_in) == -1)
+			errnosv = EFAULT;
+		free(buf_in);
+		free(pathname_in);
+		free(filename);
+		free(filepath);
+	}
+	errno = errnosv;
+	if (errno != 0)
+		return -1;
 	return 0;
 }
 
@@ -485,6 +657,55 @@ int readFile(const char* pathname, void** buf, size_t* size) {
 	if (receive_file_content(buf, size) == -1)
 		return -1;
 	return 0;
+}
+
+int readNFiles(int N, const char* dirname) {
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	// creo, se non esiste, la directory in cui memorizzare i file ricevuti dal server
+	if (dirname && mkdirr(dirname) == -1) {
+		switch (errno) {
+			case ENAMETOOLONG:
+			case EACCES:
+			case ELOOP:
+			case EMLINK:
+			case ENOSPC:
+			case EROFS:
+				errno = EINVAL;
+				break;
+			default:
+				errno = ECOMM;
+		}
+		return -1; 
+	}
+
+	request_code_t req_code = READN;
+	if (send_reqcode(req_code) == -1)
+		return -1;
+
+	if (send_N(N) == -1)
+		return -1;
+		
+	response_code_t resp_code;
+	if (receive_respcode(&resp_code) == -1)
+		return -1;
+
+	set_errno(resp_code);
+
+	if (errno != 0)
+		return -1;
+	
+	int files_received = 0;
+	if (receive_files(dirname, &files_received) == -1) {
+		if (errno != EFAULT)
+			return -1;
+	}
+	
+	return files_received;
 }
 
 int lockFile(const char* pathname) {
