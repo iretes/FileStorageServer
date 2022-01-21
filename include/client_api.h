@@ -232,6 +232,41 @@ int readNFiles(int N, const char* dirname);
  */
 int writeFile(const char* pathname, const char* dirname);
 
+/**
+ * @function          appendToFile()
+ * @brief             Richiesta di scrivere in append al file pathname i size bytes contenuti nel buffer buf. 
+ *                    L’operazione di append nel file è garantita essere atomica dal file server. 
+ *                    Se dirname è diverso da NULL, il file eventualmente spedito dal server perchè espulso dalla cache 
+ *                    per far posto ai nuovi dati di pathname viene scritto in dirname.
+ * 
+ * @param pathname    Il path del file su cui effettura l'operazione di append
+ * @param buf         Il buffer con i byte da scrivere in append
+ * @param size        La size del buffer buf
+ * @param dirname     Il path della directory in cui memorizzare gli eventuali file espulsi dal server 
+ * 
+ * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ *                    In caso di fallimento errno può assumere i seguenti valori:
+ *                    EBADF           se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC         se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY           se il server ha risposto di essere troppo occupato
+ *                    ECOMM           se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                    l'operazione
+ *                    ECONNRESET      se il server ha chiuso la connessione
+ *                    EFAULT          se non è stato possibile scrivere in dirname tutti i file che il server ha espulso e 
+ *                                    inviato
+ *                    EFBIG           se il server ha risposto che il file diverrebbe troppo grande per essere memorizzato
+ *                    EINVAL          se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
+ *                                    se pathname non è un path assoluto o contiene ','
+ *                                    se size non è 0 e buf è @c NULL
+ *                                    se dirname non è @c NULL e la sua lunghezza è 0 o > PATH_MAX-1
+ *                    ENAMETOOLONG    se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT          se il server ha risposto che il file non esiste
+ *                    EPERM           se il server ha risposto che l'operazioe sul file non è consentita
+ *                                    (il client non ha precedentemente aperto il file o il file è bloccato da un altro 
+ *                                    client) o che lo storage ha raggiunto la capacità massima e non è stato possibile 
+ *                                    espellere file
+ *                    EPROTO          se si sono verificati errori di protocollo
+ */
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname);
 
 /**

@@ -867,6 +867,65 @@ int writeFile(const char* pathname, const char* dirname) {
 	return 0;
 }
 
+int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL ||
+		(size != 0 && !buf) || 
+		(dirname && strlen(dirname) == 0) || 
+		(dirname && strlen(dirname) > (PATH_MAX-1))) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	// creo, se non esiste, la directory in cui memorizzare i file espulsi dal server
+	if (dirname && mkdirr(dirname) == -1) {
+		switch (errno) {
+			case ENAMETOOLONG:
+			case EACCES:
+			case ELOOP:
+			case EMLINK:
+			case ENOSPC:
+			case EROFS:
+				errno = EINVAL;
+				break;
+			default:
+				errno = ECOMM;
+		}
+		return -1;
+	}
+
+	request_code_t req_code = APPEND;
+	if (send_reqcode(req_code) == -1)
+		return -1;
+	
+	if (send_pathname(pathname) == -1)
+		return -1;
+
+	if (send_file_content(buf, size) == -1)
+		return -1;
+
+	response_code_t resp_code;
+	if (receive_respcode(&resp_code) == -1)
+		return -1;
+
+	set_errno(resp_code);
+
+	if (errno != 0)
+		return -1;
+
+	PRINT(" : %zu bytes scritti in append", size);
+	
+	if (receive_files(dirname, NULL) == -1)
+		return -1;
+	return 0;
+}
+
 int lockFile(const char* pathname) {
 	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
 		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
