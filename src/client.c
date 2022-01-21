@@ -62,6 +62,73 @@ static inline bool should_exit(int err) {
 }
 
 /**
+ * @function                   write_file_list()
+ * @brief                      Effettua la richiesta di scrittura al server, invocando le funzioni dell'api, 
+ *                             per ogni file della lista cmdline_operation->files.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+
+static int write_file_list(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation || !cmdline_operation->files) {
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		return 1;
+	}
+	int ret, errnosv;
+	char* filepath;
+	// itero sui file che devono essere scritti
+	list_for_each(cmdline_operation->files, filepath) {
+		// ottengo il path assoluto del file
+		char* abspath = get_absolute_path(filepath);
+		if (!abspath) {
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
+				filepath, strerror(errno));
+			if (errno == ENOMEM) return -1;
+			continue;
+		}
+
+		// invoco la funzione dell'api per aprire il file
+		PRINT("\nopenFile(pathname = %s, flags = O_CREATE|O_LOCK)", abspath);
+		RETRY_IF_BUSY(openFile(abspath, O_CREATE|O_LOCK), ret);
+		if (ret == -1) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		// invoco la funzione dell'api per scrivere il file 
+		PRINT("\nwriteFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(writeFile(abspath, cmdline_operation->dirname_out), ret);
+		if (ret == -1 && errno != EFAULT) {
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		// invoco la funzione dell'api per chiudere il file
+		PRINT("\ncloseFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(closeFile(abspath), ret);
+		if (ret == -1) {
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+		free(abspath);
+	}
+	return 0;
+}
+
+/**
  * @function                   lock_file_list()
  * @brief                      Esegue l'operazione 'l'.
  * 
@@ -340,9 +407,11 @@ int main(int argc, char* argv[]) {
 	list_for_each(cmdline_operation_list, cmdline_operation) {
 		switch (cmdline_operation->operation) {
 			case 'w':
-			case 'W':
 			case 'a':
 			case 'r':
+				break;
+			case 'W':
+				r = write_file_list(cmdline_operation);
 				break;
 			case 'R':
 				r = read_n_files(cmdline_operation);

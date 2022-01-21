@@ -192,6 +192,44 @@ int readFile(const char* pathname, void** buf, size_t* size);
  */
 int readNFiles(int N, const char* dirname);
 
+/**
+ * @function          writeFile()
+ * @brief             Scrive tutto il file puntato da pathname nel file server. Ritorna successo solo se la precedente 
+ *                    operazione, terminata con successo, è stata openFile(pathname, O_CREATE| O_LOCK). Se dirname è diverso 
+ *                    da NULL, il file eventualmente spedito dal server perchè espulso dalla cache per far posto al file 
+ *                    pathname viene scritto in dirname.
+ * 
+ * @param pathname    Il path del file da scrivere nel server
+ * @param dirname     Il path della directory in cui memorizzare gli eventuali file espulsi dal server
+ * 
+ * @return            0 in caso di successo, -1 in caso di fallimento con errno settato a indicare l'errore.
+ *                    In caso di fallimento errno può assumere i seguenti valori:
+ *                    EBADF         se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY         se il server ha risposto di essere troppo occupato
+ *                    ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                  l'operazione
+ *                    ECONNRESET    se il server ha chiuso la connessione
+ *                    EFAULT        se non è stato possibile scrivere in dirname tutti i file che il server ha espulso e 
+ *                                  inviato
+ *                    EFBIG         se il server ha risposto che la size del file è troppo grande perchè possa essere 
+ *                                  memorizzato
+ *                    EINVAL        se pathname è NULL o la sua lunghezza è 0 o > PATH_MAX-1
+ *                                  se pathname non è un path assoluto o contiene ','
+ *                                  se la open del file pathname fallisce settando errno con EACCES, EISDIR, ELOOP, 
+ *                                  ENAMETOOLONG, ENOENT, ENOTDIR, EOVERFLOW, EINTR
+ *                                  se il file pathname non è un file regolare
+ *                                  se dirname non è @c NULL e la sua lunghezza è 0 o > PATH_MAX-1
+ *                                  se la creazione della directory dirname fallisce settano errno con ENAMETOOLONG, EACCES, 
+ *                                  ELOOP, EMLINK, ENOSPC, EROFS
+ *                    ENAMETOOLONG  se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT        se il server ha risposto che il file non esiste
+ *                    EPERM         se il server ha risposto che l'operazioe sul file non è consentita
+ *                                  (l'operazione precedente del client richiedente sul file non è stata openFile(pathname, 
+ *                                  O_CREATE| O_LOCK)) o che lo storage ha raggiunto la capacità massima e non è stato 
+ *                                  possibile espellere file
+ *                    EPROTO        se si sono verificati errori di protocollo
+ */
 int writeFile(const char* pathname, const char* dirname);
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname);

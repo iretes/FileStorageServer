@@ -11,6 +11,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <limits.h>
+#include <sys/stat.h>
 
 #include <client_api.h>
 #include <protocol.h>
@@ -151,6 +152,36 @@ static int send_pathname(const char* pathname) {
 	// in caso di successo invio il path del file
 	if (r != -1 && r != 0) {
 		r = writen(g_socket_fd, (void*)pathname, pathname_len*sizeof(char));
+	}
+	if (r == -1 || r == 0) {
+		if (errno == EPIPE)
+			errno = ECONNRESET;
+		else
+			errno = ECOMM;
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * @function      send_file_content()
+ * @brief         Invia al server il contenuto di un file
+ * 
+ * @param buf     Contenuto del file da inviare
+ * @param size    Dimensione del contenuto del file
+ * 
+ * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                In caso di fallimento errno può assumere i seguenti valori:
+ *                ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
+ *                ECONNRESET   se il server ha chiuso la connessione
+ */
+static int send_file_content(void* buf, size_t size) {
+	int r;
+	// invio al server la dimensione del contenuto del file
+	r = writen(g_socket_fd, &size, sizeof(size_t));
+	// in caso di successo invio il contenuto del file
+	if (r != -1 && r != 0 && size != 0) {
+		r = writen(g_socket_fd, buf, size);
 	}
 	if (r == -1 || r == 0) {
 		if (errno == EPIPE)
@@ -706,6 +737,134 @@ int readNFiles(int N, const char* dirname) {
 	}
 	
 	return files_received;
+}
+
+int writeFile(const char* pathname, const char* dirname) {
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL ||
+		(dirname && strlen(dirname) == 0) || (dirname && strlen(dirname) > (PATH_MAX-1))) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// controllo se la connessione è stata aperta
+	if (g_socket_fd == -1) {
+		errno = ECOMM;
+		return -1;
+	}
+
+	// apro il file pathname
+	int errnosv = 0;
+	FILE * file;
+	file = fopen(pathname, "r+");
+	if (!file) {
+		switch (errno) {
+			case EACCES:
+			case EISDIR:
+			case ELOOP:
+			case ENAMETOOLONG:
+			case ENOENT:
+			case ENOTDIR:
+			case EOVERFLOW:
+			case EINTR:
+				errno = EINVAL;
+				break; 
+			default:
+				errno = ECOMM;
+		}
+		return -1;
+	}
+
+	// creo, se non esiste, la directory in cui memorizzare i file espulsi dal server
+	if (dirname && mkdirr(dirname) == -1) {
+		switch (errno) {
+			case ENAMETOOLONG:
+			case EACCES:
+			case ELOOP:
+			case EMLINK:
+			case ENOSPC:
+			case EROFS:
+				errnosv = EINVAL;
+				break;
+			default:
+				errnosv = ECOMM;
+		}
+		fclose(file);
+		errno = errnosv;
+		return -1; 
+	}
+
+	// ricavo la size di pathname
+	struct stat statbuf;
+	if (stat(pathname, &statbuf) == -1) {
+		fclose(file);
+		errno = ECOMM;
+		return -1;
+	}
+	size_t buf_size = statbuf.st_size;
+
+	// controllo che pathname sia un file regolare
+	if (!S_ISREG(statbuf.st_mode)) {
+		fclose(file);
+		errno = EINVAL;
+		return -1;
+	}
+
+	void* buf = NULL;
+	if (buf_size != 0) {
+		// alloco un buffer per leggere il contenuto del file pathname
+		buf = malloc(buf_size);
+		if (!buf) {
+			fclose(file);
+			errno = ECOMM;
+			return -1;
+		}
+
+		// leggo il contenuto del file pathname
+		if (fread(buf, 1, buf_size, file) != buf_size) {
+			fclose(file);
+			free(buf);
+			errno = ECOMM;
+			return -1;
+		}
+	}
+	// chiudo il file pathname
+	if (fclose(file) == -1) {
+		free(buf);
+		errno = ECOMM;
+		return -1;
+	}
+	
+	request_code_t req_code = WRITE;
+	if (send_reqcode(req_code) == -1) {
+		free(buf);
+		return -1;
+	}
+	if (send_pathname(pathname) == -1) {
+		free(buf);
+		return -1;
+	}
+	if (send_file_content(buf, buf_size) == -1) {
+		free(buf);
+		return -1;
+	}
+	if (buf)
+		free(buf);
+	
+	response_code_t resp_code;
+	if (receive_respcode(&resp_code) == -1)
+		return -1;
+
+	set_errno(resp_code);
+
+	if (errno != 0)
+		return -1;
+
+	PRINT(" : %zu bytes scritti", buf_size);
+
+	if (receive_files(dirname, NULL) == -1)
+		return -1;
+	return 0;
 }
 
 int lockFile(const char* pathname) {
