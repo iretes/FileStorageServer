@@ -73,7 +73,7 @@ static inline bool should_exit(int err) {
  */
 int lock_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'", __func__);
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 
@@ -83,7 +83,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)", 
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -128,7 +128,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
  */
 int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'", __func__);
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 	
@@ -138,7 +138,7 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)", 
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -172,7 +172,7 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
  */
 int remove_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'", __func__);
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 	
@@ -182,7 +182,7 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)", 
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -322,7 +322,7 @@ int main(int argc, char* argv[]) {
 		   richiesta successiva */
 		if (cmdline_operation->time > 0) {
 			if (millisleep(cmdline_operation->time) == -1) {
-				fprintf(stderr, "\nERR: millisleep (%s)", strerror(errno));
+				fprintf(stderr, "\nERR: millisleep (%s)\n", strerror(errno));
 			}
 		}
 		errno = 0;
