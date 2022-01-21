@@ -165,6 +165,31 @@ int openFile(const char* pathname, int flags);
  */
 int readFile(const char* pathname, void** buf, size_t* size);
 
+/**
+ * @function         readNFiles()
+ * @brief            Richiede al server la lettura di N files qualsiasi da memorizzare nella directory dirname lato client. 
+ *                   Se il server ha meno di N file disponibili, li invia tutti. Se N <= 0 la richiesta al server è quella 
+ *                   di leggere tutti i file memorizzati al suo interno. 
+ * @warning          Nel caso in cui il valore ritornato sia MAX_INT il client può aver ricevto un numero di file maggiore o 
+ *                   uguale a MAX_INT.
+ * 
+ * @param N          Il numero di file da leggere, se <= 0 indica una richiesta di lettura di tutti i file memorizzati dal 
+ *                   server
+ * @param dirname    La directory in cui vengono memorizzati i file ricevuti dal server, 
+ *                   se è @c NULL i file ricevuti non vengono memorizzati 
+ * 
+ * @return           Un valore >= 0 in caso di successo (cioè ritorna il n. di file effettivamente letti), 
+ *                   -1 in caso di fallimento ed errno settato ad indicare l'errore. Se dirname non è @c NULL e non è stato 
+ *                   possibile scrivere tutti i file nella directory viene ritornato il numero di file ricevuti ed errno
+ *                   è settato a EFAULT.
+ *                   In caso di fallimento errno può assumere i seguenti valori:
+ *                   EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                   EBUSY         se il server ha risposto di essere troppo occupato
+ *                   ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare l'operazione
+ *                   ECONNRESET    se il server ha chiuso la connessione
+ *                   EFAULT        se non è stato possibile scrivere tutti i file ricevuti nella directory dirname
+ *                   EPROTO        se si sono verificati errori di protocollo
+ */
 int readNFiles(int N, const char* dirname);
 
 int writeFile(const char* pathname, const char* dirname);
