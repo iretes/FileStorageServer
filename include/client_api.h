@@ -1,6 +1,6 @@
 /**
- * @file     client_api.h
- * @brief    Api del client. L'implementazione delle funzioni non è thread safe.
+ * @file              client_api.h
+ * @brief             Api del client. L'implementazione delle funzioni non è thread safe.
  */
 
 #ifndef CLIENT_API_H
@@ -12,24 +12,24 @@
 
 #include <protocol.h>
 
-/** File descriptor associato al socket */
+/* File descriptor associato al socket */
 int g_socket_fd;
-/** Path del socket file */
+/* Path del socket file */
 char g_sockname[UNIX_PATH_MAX];
-/** Flag che indica se le stampe sullo stdout sono abilitate */
+/* Flag che indica se le stampe sullo stdout sono abilitate */
 bool print_enable;
 
-/** Flag per l'apertura di un file con modalità "create" */
+/* Flag per l'apertura di un file con modalità "create" */
 #define O_CREATE 01
-/** Flag per l'apertura di un file con modalità "lock" */
+/* Flag per l'apertura di un file con modalità "lock" */
 #define O_LOCK 10
 
 /**
- * @def          PRINT()
- * @brief        Stampa sullo stdout con il formato fmt se le stampe sono abilitate.
+ * @def               PRINT()
+ * @brief             Stampa sullo stdout con il formato fmt se le stampe sono abilitate.
  * 
- * @param fmt    Formato della stampa come in printf
- * @param ...    Argomenti della stampa
+ * @param fmt         Formato della stampa come in printf
+ * @param ...         Argomenti della stampa
  */
 #define PRINT(fmt, ...) \
 	do { \
@@ -41,32 +41,32 @@ bool print_enable;
 	} while(0); \
 
 /**
- * @function    enable_printing()
- * @brief       Abilita le stampe sullo stdout.
+ * @function          enable_printing()
+ * @brief             Abilita le stampe sullo stdout.
  * 
- * @return      0 in caso di successo, -1 se le stampe erano già abilitate.
+ * @return            0 in caso di successo, -1 se le stampe erano già abilitate.
  */
 int enable_printing();
 
 /**
- * @function   is_printing_enable()
- * @brief      Consente di stabilire se le stampe sullo stdout sono abilitate.
+ * @function          is_printing_enable()
+ * @brief             Consente di stabilire se le stampe sullo stdout sono abilitate.
  * 
- * @return     @c true se le stampe sono abilitate, @c false altrimenti.
+ * @return            @c true se le stampe sono abilitate, @c false altrimenti.
  */
 bool is_printing_enable();
 
 /**
- * @function     errno_to_str()
- * @brief        Restitusce una descrizione dell'errno settato dalle funzioni della api
+ * @function          errno_to_str()
+ * @brief             Restitusce una descrizione dell'errno settato dalle funzioni della api.
  * 
- * @param err    Valore dell'errore
- * @return       Una stringa che descrive err in caso di successo, @c NULL se err non è un errore riconosciuto.
+ * @param err         Valore dell'errore
+ * @return            Una stringa che descrive err in caso di successo, @c NULL se err non è un errore riconosciuto.
  */
 char* errno_to_str(int err);
 
 /**
- * @function openConnection()
+ * @function          openConnection()
  * @brief             Apre una connessione AF_UNIX al socket file sockname. Se il server non accetta immediatamente la 
  *                    richiesta di connessione, la connessione da parte del client viene ripetuta dopo msec millisecondi e 
  *                    fino allo scadere del tempo assoluto abstime. 
@@ -77,12 +77,12 @@ char* errno_to_str(int err);
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    ECOMM      se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
- *                    EINTR      se è stata ricevuta un'interruzione
- *                    EINVAL     se sockname è @c NULL o la sua lunghezza è 0 o è > UNIX_PATH_MAX-1,
- *                               se msec < 0, se abstime.tv_sec < 0 o abstime.tv_nsec < 0 o >= 1000000000
- *                    EISCONN    se il client è già connesso alla socket
- *                    ETIMEDOUT  se non è stato possibile instaurare una connessione con il server entro il tempo assoluto 
+ *                    ECOMM        se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
+ *                    EINTR        se è stata ricevuta un'interruzione
+ *                    EINVAL       se sockname è @c NULL o la sua lunghezza è 0 o è > UNIX_PATH_MAX-1,
+ *                                 se msec < 0, se abstime.tv_sec < 0 o abstime.tv_nsec < 0 o >= 1000000000
+ *                    EISCONN      se il client è già connesso alla socket
+ *                    ETIMEDOUT    se non è stato possibile instaurare una connessione con il server entro il tempo assoluto 
  *                               abstime
  */
 int openConnection(const char* sockname, int msec, const struct timespec abstime);
@@ -95,14 +95,15 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EALREADY   se la connessione non era stata aperta
- *                    ECOMM      se si sono verificati errori lato client che non hanno reso possibile effetuare l'operazione
- *                    EINVAL     se sockname è @c NULL o la sua lunghezza è 0
+ *                    EALREADY     se la connessione non era stata aperta
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile effetuare 
+ *                                 l'operazione
+ *                    EINVAL       se sockname è @c NULL o la sua lunghezza è 0
  */
 int closeConnection(const char* sockname);
 
 /**
- * @function openFile()
+ * @function          openFile()
  * @brief             Richiesta di apertura o di creazione di un file.
  *                    La semantica della openFile dipende dai flags passati come secondo argomento che possono essere 
  *                    O_CREATE ed O_LOCK. In caso di successo, il file viene sempre aperto in lettura e scrittura, 
@@ -118,26 +119,26 @@ int closeConnection(const char* sockname);
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EALREADY       se il server ha risposto che il file è stato già aperto dal client
- *                    EBADF          se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
- *                    EBADRQC        se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                    EBUSY          se il server ha risposto di essere troppo occupato
- *                    ECOMM          se si sono verificati errori lato client che non hanno reso possibile completare 
- *                                  l'operazione
- *                    ECONNRESET     se il server ha chiuso la connessione
- *                    EEXIST         se è stato usato il flag O_CREATE e il server ha risposto che il file è già esistente
- *                    EINVAL         se pathname è @c NULL o è lungo 0 o > PATH_MAX-1, se pathname non è un path assoluto o 
- *                                      se contiene ','
- *                    ENAMETOOLONG   se il server ha risposto che il path del file è troppo lungo
- *                    ENOENT         se non è stato usato il flag O_CREATE e il server ha risposto che il file non esiste
- *                    EPERM          se il server ha risposto che lo storage ha raggiunto la capacità massima e non è stato 
- *                                   possibile espellere file
- *                    EPROTO         se si sono verificati errori di protocollo
+ *                    EALREADY     se il server ha risposto che il file è stato già aperto dal client
+ *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EEXIST       se è stato usato il flag O_CREATE e il server ha risposto che il file è già esistente
+ *                    EINVAL       se pathname è @c NULL o è lungo 0 o > PATH_MAX-1, se pathname non è un path assoluto o 
+ *                                 se contiene ','
+ *                    ENAMETOOLONG se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT       se non è stato usato il flag O_CREATE e il server ha risposto che il file non esiste
+ *                    EPERM        se il server ha risposto che lo storage ha raggiunto la capacità massima e non è stato 
+ *                                 possibile espellere file
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int openFile(const char* pathname, int flags);
 
 /**
- * @function readFile()
+ * @function          readFile()
  * @brief             Legge tutto il contenuto del file dal server (se esiste) ritornando un puntatore ad un'area allocata 
  *                    sullo heap nel parametro buf, mentre size conterrà la dimensione del buffer dati (ossia la dimensione 
  *                    in bytes del file letto). In caso di errore, buf e size non sono validi.
@@ -148,47 +149,48 @@ int openFile(const char* pathname, int flags);
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EBADF         se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
- *                    EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                    EBUSY         se il server ha risposto di essere troppo occupato
- *                    ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare 
- *                                  l'operazione
- *                    ECONNRESET    se il server ha chiuso la connessione
- *                    EINVAL        se pathname è @c NULL o è lungo 0 o > PATH_MAX, se pathname non è un path assoluto o 
- *                                  se contiene ',', 
- *                                  se buf è @c NULL o se size è @c NULL
- *                    ENAMETOOLONG  se il server ha risposto che il path del file è troppo lungo
- *                    ENOENT        se il server ha risposto che il file non esiste
- *                    EPERM         se il server ha risposto che l'operazioe sul file non è consentita 
- *                                  (il client non ha precedentemente aperto il file o il file è bloccato da un altro client)
- *                    EPROTO        se si sono verificati errori di protocollo
+ *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EINVAL       se pathname è @c NULL o è lungo 0 o > PATH_MAX, se pathname non è un path assoluto o 
+ *                                 se contiene ',', 
+ *                                 se buf è @c NULL o se size è @c NULL
+ *                    ENAMETOOLONG se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT       se il server ha risposto che il file non esiste
+ *                    EPERM        se il server ha risposto che l'operazioe sul file non è consentita 
+ *                                 (il client non ha precedentemente aperto il file o il file è bloccato da un altro client)
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int readFile(const char* pathname, void** buf, size_t* size);
 
 /**
- * @function         readNFiles()
- * @brief            Richiede al server la lettura di N files qualsiasi da memorizzare nella directory dirname lato client. 
- *                   Se il server ha meno di N file disponibili, li invia tutti. Se N <= 0 la richiesta al server è quella 
- *                   di leggere tutti i file memorizzati al suo interno. 
- * @warning          Nel caso in cui il valore ritornato sia MAX_INT il client può aver ricevto un numero di file maggiore o 
- *                   uguale a MAX_INT.
+ * @function          readNFiles()
+ * @brief             Richiede al server la lettura di N files qualsiasi da memorizzare nella directory dirname lato client. 
+ *                    Se il server ha meno di N file disponibili, li invia tutti. Se N <= 0 la richiesta al server è quella 
+ *                    di leggere tutti i file memorizzati al suo interno. 
+ * @warning           Nel caso in cui il valore ritornato sia MAX_INT il client può aver ricevto un numero di file maggiore o 
+ *                    uguale a MAX_INT.
  * 
- * @param N          Il numero di file da leggere, se <= 0 indica una richiesta di lettura di tutti i file memorizzati dal 
- *                   server
- * @param dirname    La directory in cui vengono memorizzati i file ricevuti dal server, 
- *                   se è @c NULL i file ricevuti non vengono memorizzati 
+ * @param N           Il numero di file da leggere, se <= 0 indica una richiesta di lettura di tutti i file memorizzati dal 
+ *                    server
+ * @param dirname     La directory in cui vengono memorizzati i file ricevuti dal server, 
+ *                    se è @c NULL i file ricevuti non vengono memorizzati 
  * 
- * @return           Un valore >= 0 in caso di successo (cioè ritorna il n. di file effettivamente letti), 
- *                   -1 in caso di fallimento ed errno settato ad indicare l'errore. Se dirname non è @c NULL e non è stato 
- *                   possibile scrivere tutti i file nella directory viene ritornato il numero di file ricevuti ed errno
- *                   è settato a EFAULT.
- *                   In caso di fallimento errno può assumere i seguenti valori:
- *                   EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                   EBUSY         se il server ha risposto di essere troppo occupato
- *                   ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare l'operazione
- *                   ECONNRESET    se il server ha chiuso la connessione
- *                   EFAULT        se non è stato possibile scrivere tutti i file ricevuti nella directory dirname
- *                   EPROTO        se si sono verificati errori di protocollo
+ * @return            Un valore >= 0 in caso di successo (cioè ritorna il n. di file effettivamente letti), 
+ *                    -1 in caso di fallimento ed errno settato ad indicare l'errore. Se dirname non è @c NULL e non è stato 
+ *                    possibile scrivere tutti i file nella directory viene ritornato il numero di file ricevuti ed errno
+ *                    è settato a EFAULT.
+ *                    In caso di fallimento errno può assumere i seguenti valori:
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EFAULT       se non è stato possibile scrivere tutti i file ricevuti nella directory dirname
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int readNFiles(int N, const char* dirname);
 
@@ -204,31 +206,31 @@ int readNFiles(int N, const char* dirname);
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento con errno settato a indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EBADF         se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
- *                    EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                    EBUSY         se il server ha risposto di essere troppo occupato
- *                    ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare 
- *                                  l'operazione
- *                    ECONNRESET    se il server ha chiuso la connessione
- *                    EFAULT        se non è stato possibile scrivere in dirname tutti i file che il server ha espulso e 
- *                                  inviato
- *                    EFBIG         se il server ha risposto che la size del file è troppo grande perchè possa essere 
- *                                  memorizzato
- *                    EINVAL        se pathname è NULL o la sua lunghezza è 0 o > PATH_MAX-1
- *                                  se pathname non è un path assoluto o contiene ','
- *                                  se la open del file pathname fallisce settando errno con EACCES, EISDIR, ELOOP, 
- *                                  ENAMETOOLONG, ENOENT, ENOTDIR, EOVERFLOW, EINTR
- *                                  se il file pathname non è un file regolare
- *                                  se dirname non è @c NULL e la sua lunghezza è 0 o > PATH_MAX-1
- *                                  se la creazione della directory dirname fallisce settano errno con ENAMETOOLONG, EACCES, 
- *                                  ELOOP, EMLINK, ENOSPC, EROFS
- *                    ENAMETOOLONG  se il server ha risposto che il path del file è troppo lungo
- *                    ENOENT        se il server ha risposto che il file non esiste
- *                    EPERM         se il server ha risposto che l'operazioe sul file non è consentita
- *                                  (l'operazione precedente del client richiedente sul file non è stata openFile(pathname, 
- *                                  O_CREATE| O_LOCK)) o che lo storage ha raggiunto la capacità massima e non è stato 
- *                                  possibile espellere file
- *                    EPROTO        se si sono verificati errori di protocollo
+ *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EFAULT       se non è stato possibile scrivere in dirname tutti i file che il server ha espulso e 
+ *                                 inviato
+ *                    EFBIG        se il server ha risposto che la size del file è troppo grande perchè possa essere 
+ *                                 memorizzato
+ *                    EINVAL       se pathname è NULL o la sua lunghezza è 0 o > PATH_MAX-1
+ *                                 se pathname non è un path assoluto o contiene ','
+ *                                 se la open del file pathname fallisce settando errno con EACCES, EISDIR, ELOOP, 
+ *                                 ENAMETOOLONG, ENOENT, ENOTDIR, EOVERFLOW, EINTR
+ *                                 se il file pathname non è un file regolare
+ *                                 se dirname non è @c NULL e la sua lunghezza è 0 o > PATH_MAX-1
+ *                                 se la creazione della directory dirname fallisce settano errno con ENAMETOOLONG, EACCES, 
+ *                                 ELOOP, EMLINK, ENOSPC, EROFS
+ *                    ENAMETOOLONG se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT       se il server ha risposto che il file non esiste
+ *                    EPERM        se il server ha risposto che l'operazioe sul file non è consentita
+ *                                 (l'operazione precedente del client richiedente sul file non è stata openFile(pathname, 
+ *                                 O_CREATE| O_LOCK)) o che lo storage ha raggiunto la capacità massima e non è stato 
+ *                                 possibile espellere file
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int writeFile(const char* pathname, const char* dirname);
 
@@ -246,31 +248,31 @@ int writeFile(const char* pathname, const char* dirname);
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EBADF           se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
- *                    EBADRQC         se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                    EBUSY           se il server ha risposto di essere troppo occupato
- *                    ECOMM           se si sono verificati errori lato client che non hanno reso possibile completare 
- *                                    l'operazione
- *                    ECONNRESET      se il server ha chiuso la connessione
- *                    EFAULT          se non è stato possibile scrivere in dirname tutti i file che il server ha espulso e 
- *                                    inviato
- *                    EFBIG           se il server ha risposto che il file diverrebbe troppo grande per essere memorizzato
- *                    EINVAL          se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
- *                                    se pathname non è un path assoluto o contiene ','
- *                                    se size non è 0 e buf è @c NULL
- *                                    se dirname non è @c NULL e la sua lunghezza è 0 o > PATH_MAX-1
- *                    ENAMETOOLONG    se il server ha risposto che il path del file è troppo lungo
- *                    ENOENT          se il server ha risposto che il file non esiste
- *                    EPERM           se il server ha risposto che l'operazioe sul file non è consentita
- *                                    (il client non ha precedentemente aperto il file o il file è bloccato da un altro 
- *                                    client) o che lo storage ha raggiunto la capacità massima e non è stato possibile 
- *                                    espellere file
- *                    EPROTO          se si sono verificati errori di protocollo
+ *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EFAULT       se non è stato possibile scrivere in dirname tutti i file che il server ha espulso e 
+ *                                 inviato
+ *                    EFBIG        se il server ha risposto che il file diverrebbe troppo grande per essere memorizzato
+ *                    EINVAL       se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
+ *                                 se pathname non è un path assoluto o contiene ','
+ *                                 se size non è 0 e buf è @c NULL
+ *                                 se dirname non è @c NULL e la sua lunghezza è 0 o > PATH_MAX-1
+ *                    ENAMETOOLONG se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT       se il server ha risposto che il file non esiste
+ *                    EPERM        se il server ha risposto che l'operazioe sul file non è consentita
+ *                                 (il client non ha precedentemente aperto il file o il file è bloccato da un altro 
+ *                                 client) o che lo storage ha raggiunto la capacità massima e non è stato possibile 
+ *                                 espellere file
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname);
 
 /**
- * @function lockFile()
+ * @function          lockFile()
  * @brief             In caso di successo setta il flag O_LOCK al file. Se il file era stato aperto/creato dal client 
  *                    con il flag O_LOCK e la, oppure se il file non ha il flag O_LOCK settato, l’operazione termina
  *                    immediatamente con successo, altrimenti l’operazione non viene completata fino a quando il flag O_LOCK 
@@ -281,24 +283,24 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EBADF         se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
- *                    EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                    EBUSY         se il server ha risposto di essere troppo occupato
- *                    ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare 
- *                                  l'operazione
- *                    ECONNRESET    se il server ha chiuso la connessione
- *                    EINVAL        se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
- *                                  se pathname non è un path assoluto o contiene ','
- *                    ENAMETOOLONG  se il server ha risposto che il path del file è troppo lungo
- *                    ENOENT        se il server ha risposto che il file non esiste
- *                    EPERM         se il server ha risposto che l'operazioe sul file non è consentita 
- *                                  (il client non ha precedentemente aperto il file)
- *                    EPROTO        se si sono verificati errori di protocollo
+ *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EINVAL       se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
+ *                                 se pathname non è un path assoluto o contiene ','
+ *                    ENAMETOOLONG se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT       se il server ha risposto che il file non esiste
+ *                    EPERM        se il server ha risposto che l'operazioe sul file non è consentita 
+ *                                 (il client non ha precedentemente aperto il file)
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int lockFile(const char* pathname);
 
 /**
- * @function unlockFile()
+ * @function          unlockFile()
  * @brief             Resetta il flag O_LOCK sul file pathname. L’operazione ha successo solo se il client detiene la lock
  *                    sul file, altrimenti l’operazione termina con errore.
  * 
@@ -306,18 +308,19 @@ int lockFile(const char* pathname);
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EBADF se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
- *                    EBADRQC se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                    EBUSY se il server ha risposto di essere troppo occupato
- *                    ECOMM se si sono verificati errori lato client che non hanno reso possibile completare l'operazione
- *                    ECONNRESET se il server ha chiuso la connessione
- *                    EINVAL se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
- *                           se pathname non è un path assoluto o contiene ','
+ *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EINVAL       se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
+ *                                 se pathname non è un path assoluto o contiene ','
  *                    ENAMETOOLONG se il server ha risposto che il path del file è troppo lungo
- *                    ENOENT se il server ha risposto che il file non esiste
- *                    EPERM se il server ha risposto che l'operazioe sul file non è consentita 
- *                          (il client non ha precedentemente bloccato il file)
- *                    EPROTO se si sono verificati errori di protocollo
+ *                    ENOENT       se il server ha risposto che il file non esiste
+ *                    EPERM        se il server ha risposto che l'operazioe sul file non è consentita 
+ *                                 (il client non ha precedentemente bloccato il file)
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int unlockFile(const char* pathname);
 
@@ -330,19 +333,19 @@ int unlockFile(const char* pathname);
  * 
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    EBADF         se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
- *                    EBADRQC       se il server ha risposto che l'operazione richiesta non è stata riconosciuta
- *                    EBUSY         se il server ha risposto di essere troppo occupato
- *                    ECOMM         se si sono verificati errori lato client che non hanno reso possibile completare 
- *                                  l'operazione
- *                    ECONNRESET    se il server ha chiuso la connessione
- *                    EINVAL        se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
- *                                  se pathname non è un path assoluto o contiene ','
- *                    ENAMETOOLONG  se il server ha risposto che il path del file è troppo lungo
- *                    ENOENT        se il server ha risposto che il file non esiste
- *                    EPERM         se il server ha risposto che l'operazioe sul file non è consentita
- *                                  (il client non ha precedentemente aperto il file)
- *                    EPROTO        se si sono verificati errori di protocollo
+ *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
+ *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
+ *                    EBUSY        se il server ha risposto di essere troppo occupato
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
+ *                    ECONNRESET   se il server ha chiuso la connessione
+ *                    EINVAL       se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
+ *                                 se pathname non è un path assoluto o contiene ','
+ *                    ENAMETOOLONG se il server ha risposto che il path del file è troppo lungo
+ *                    ENOENT       se il server ha risposto che il file non esiste
+ *                    EPERM        se il server ha risposto che l'operazioe sul file non è consentita
+ *                                 (il client non ha precedentemente aperto il file)
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int closeFile(const char* pathname);
 
@@ -358,7 +361,8 @@ int closeFile(const char* pathname);
  *                    EBADF        se il server ha risposto che il path del file non è valido (è vuoto o contiene ',')
  *                    EBADRQC      se il server ha risposto che l'operazione richiesta non è stata riconosciuta
  *                    EBUSY        se il server ha risposto di essere troppo occupato
- *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare l'operazione
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile completare 
+ *                                 l'operazione
  *                    ECONNRESET   se il server ha chiuso la connessione
  *                    EINVAL       se pathname è @c NULL o la sua lunghezza è 0 o > PATH_MAX-1
  *                                 se pathname non è un path assoluto o contiene ','
@@ -366,7 +370,7 @@ int closeFile(const char* pathname);
  *                    ENOENT       se il server ha risposto che il file non esiste
  *                    EPERM        se il server ha risposto che l'operazioe sul file non è consentita
  *                                 (il client non ha bloccato il file)
- *                    EPROTO se si sono verificati errori di protocollo
+ *                    EPROTO       se si sono verificati errori di protocollo
  */
 int removeFile(const char* pathname);
 

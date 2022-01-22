@@ -6,8 +6,6 @@
 #ifndef INT_LIST_H
 #define INT_LIST_H
 
-#include <stdlib.h>
-
 #include <list.h>
 
 /**

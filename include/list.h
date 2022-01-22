@@ -6,8 +6,6 @@
 #ifndef LIST_H
 #define LIST_H
 
-#include <stdlib.h>
-
 /* Indica la volontà di deallocare il dato di un nodo della lista, 
    da passare come secondo parametro in list_destroy() */
 #define LIST_FREE_DATA 1

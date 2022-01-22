@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/time.h>
-
+#include <pthread.h>
 
 /**
  * @def         timespecsub()
@@ -64,6 +64,12 @@
 #define EXTF exit(EXIT_FAILURE)
 
 /**
+ * @def RETM1
+ * @brief Ritorna -1
+ */
+#define RETM1 return -1;
+
+/**
  * @def        PERRORSTR()
  * @brief      Stampa su stderr la descrizione di errno.
  * 
@@ -79,7 +85,7 @@
 		else \
 			fprintf(stderr, "ERR: %s:%s():%d: %d\n", __FILE__, __func__, __LINE__, err); \
 		fflush(stderr); \
-    } while(0);
+	} while(0);
 
 /**
  * @def        PERRNO()

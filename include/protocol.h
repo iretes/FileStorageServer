@@ -9,9 +9,7 @@
 /* Path di default della socket */
 #define DEFAULT_SOCKET_PATH "./storage_socket"
 
-/**
- * Massima dimensione del path del socket file
- */
+/* Massima dimensione del path del socket file */
 #define UNIX_PATH_MAX 108
 
 /**
