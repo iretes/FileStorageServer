@@ -273,6 +273,132 @@ static int write_files_dir(cmdline_operation_t* cmdline_operation) {
 }
 
 /**
+ * @function                   append_file_list()
+ * @brief                      Esegue l'operazione 'a'.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+static int append_file_list(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation || !cmdline_operation->files || !cmdline_operation->source_file) {
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		return 1;
+	}
+
+	// apro il file il cui contenuto deve essere scritto in append
+	FILE * file = fopen(cmdline_operation->source_file, "r+");
+	if (!file) {
+		fprintf(stderr, "\nERR: fopen di '%s' con modalità r+ (%s)\n",
+			cmdline_operation->source_file, strerror(errno));
+		if (errno == ENOMEM) return -1;
+		return 1;
+	}
+
+	void* buf = NULL;
+	size_t size = 0;
+	bool fail = false;
+
+	// leggo la dimensione del file
+	struct stat statbuf;
+	if (stat(cmdline_operation->source_file, &statbuf) == -1) {
+		fprintf(stderr, "\nERR: stat di '%s' (%s)\n",
+				cmdline_operation->source_file, strerror(errno));
+		fail = true; 
+	}
+	else {
+		size += statbuf.st_size;
+		// controllo se è un file regolare
+		if (!S_ISREG(statbuf.st_mode)) {
+			fprintf(stderr, "\nERR: il file '%s' non è un file regolare\n",
+				cmdline_operation->source_file);
+			fail = true; 
+		}
+		if (!fail && size != 0) {
+			// alloco un buffer per la lettura del file
+			buf = malloc(size);
+			if (!buf) {
+				fprintf(stderr, "\nERR: malloc per la lettura del file '%s' (%s)\n",
+					cmdline_operation->source_file, strerror(errno));
+				fail = true;
+			}
+		}
+	}
+	if (size != 0 && !fail) {
+		// leggo il file
+		if (fread(buf, 1, size, file) != size) {
+			fprintf(stderr, "\nERR: fread di '%s' (%s)\n",
+				cmdline_operation->source_file, strerror(errno));
+			fail = true;
+		}
+	}
+	// chiudo il file
+	if (fclose(file) == -1) {
+		fprintf(stderr, "\nERR: fclose di '%s' (%s)\n",
+			cmdline_operation->source_file, strerror(errno));
+	}
+	if (fail) {
+		if (buf)
+			free(buf);
+		if (errno == ENOMEM) return -1;
+		else return 1;
+	}
+
+	int ret, errnosv;
+	char* filepath;
+	// itero sui file che devono essere scritti in append
+	list_for_each(cmdline_operation->files, filepath) {
+		// ottengo il path assoluto del file
+		char* abspath = get_absolute_path(filepath);
+		if (!abspath) {
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n",
+				filepath, strerror(errno));
+			if (errno == ENOMEM) return -1;
+			continue;
+		}
+
+		// invoco la funzione dell'api per aprire il file
+		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
+		RETRY_IF_BUSY(openFile(abspath, 0), ret);
+		if (ret == -1 && errno != EALREADY) {
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		// invoco la funzione dell'api per effettuare l'operazione di append
+		PRINT("\nappendToFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(appendToFile(abspath, buf, size, cmdline_operation->dirname_out), ret);
+		if (ret == -1 && errno != EFAULT) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		// invoco la funzione dell'api per chiudere il file
+		PRINT("\ncloseFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(closeFile(abspath), ret);
+		if (ret == -1) {
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+		free(abspath);
+	}
+	if (buf)
+		free(buf);
+	return 0;
+}
+
+/**
  * @function                   read_file_list()
  * @brief                      Esegue l'operazione 'r'.
  * 
@@ -679,6 +805,7 @@ int main(int argc, char* argv[]) {
 				r = write_files_dir(cmdline_operation);
 				break;
 			case 'a':
+				r = append_file_list(cmdline_operation);
 				break;
 			case 'W':
 				r = write_file_list(cmdline_operation);
