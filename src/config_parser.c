@@ -291,7 +291,6 @@ int config_parser(config_t *config, char* filepath) {
 	return 0;
 
 config_parser_exit:
-	config_destroy(config);
 	fclose(f);
 	return -1;
 }

@@ -28,8 +28,10 @@ logger_t* logger_create(char* log_file_path, char* init_line) {
 
 	// apro il file di log
 	logger->file = fopen(log_file_path, "w");
-	if (logger->file == NULL)
+	if (logger->file == NULL) {
+		free(logger);
 		return NULL;
+	}
 
 	// inizializzo la mutex per l'accesso esclusivo al file di log
 	if ((r = pthread_mutex_init(&(logger->mutex), NULL)) != 0) {

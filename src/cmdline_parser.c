@@ -389,14 +389,12 @@ list_t* cmdline_parser(int argc, char* argv[], char** socket_path) {
 				if (cmdline_operation->time != -1) {
 					fprintf(stderr, "ERR: l'opzione -t può essere specificata una sola volta congiuntamente a un'altra "
 						"opzione\n");
-					cmdline_operation_destroy(cmdline_operation);
 					errnosv = EINVAL;
 					goto cmdline_parser_exit;
 				}
 				// controllo se l'opzione non ha argomento
 				if (optarg[0] == '-') { 
 					PRINT_NEEDS_ARG(option);
-					cmdline_operation_destroy(cmdline_operation);
 					errnosv = EINVAL;
 					goto cmdline_parser_exit;
 				}
@@ -429,6 +427,7 @@ list_t* cmdline_parser(int argc, char* argv[], char** socket_path) {
 			case 'h': // -h
 				// stampo il messaggio di help
 				usage(argv[0]);
+				cmdline_operation_destroy(cmdline_operation);
 				list_destroy(cmdline_operation_list, LIST_FREE_DATA);
 				errno = 0;
 				return NULL;
@@ -500,8 +499,7 @@ list_t* cmdline_parser(int argc, char* argv[], char** socket_path) {
 	return cmdline_operation_list;
 
 cmdline_parser_exit:
-	if (cmdline_operation != NULL)
-		free(cmdline_operation);
+	cmdline_operation_destroy(cmdline_operation);
 	if (cmdline_operation_list != NULL)
 		list_destroy(cmdline_operation_list, LIST_FREE_DATA);
 	errno = errnosv;

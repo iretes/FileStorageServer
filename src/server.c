@@ -392,12 +392,18 @@ int main(int argc, char *argv[]) {
 	// effettuo il parsing del file di configurazione
 	EQNULL_DO(config_init(), config, EXTF);
 	if (config_parser(config, config_file) == -1) {
-		config = NULL;
 		extval = EXIT_FAILURE;
 		goto server_exit;
 	}
 	free(config_file);
 	config_file = NULL;
+
+	// creo l'oggetto logger
+	logger_t* logger = logger_create(config->log_file_path, INIT_LINE);
+	if (!logger) {
+		extval = EXIT_FAILURE;
+		goto server_exit;
+	}
 
 	// stampo i valori di configurazione
 	printf("=========== VALORI DI CONFIGURAZIONE ===========\n");
@@ -429,10 +435,6 @@ int main(int argc, char *argv[]) {
 	// pipe per la comunicazione tra master e workers
 	int workers_pipe[2];
 	EQM1_DO(pipe(workers_pipe), r, EXTF);
-
-	// creo l'oggetto logger
-	logger_t* logger;
-	EQNULL_DO(logger_create(config->log_file_path, INIT_LINE), logger, EXTF);
 
 	// creo l'oggetto storage
 	storage_t* storage = NULL;
