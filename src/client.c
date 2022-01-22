@@ -129,6 +129,131 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 }
 
 /**
+ * @function                   read_file_list()
+ * @brief                      Esegue l'operazione 'r'.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+static int read_file_list(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation || !cmdline_operation->files) {
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		return 1;
+	}
+
+	if (cmdline_operation->dirname_out) {
+		// creo, se non esiste, la directory in cui memorizzare i file letti dal server
+		if (mkdirr(cmdline_operation->dirname_out) == -1) {
+			fprintf(stderr, "\nERR: mkdirr di '%s' (%s), i file ricevuti non saranno scritti su disco\n",
+				cmdline_operation->dirname_out, strerror(errno));
+			// se non è possibile creare la directory e l'errore è diverso da ENOMEM proseguo senza salvare i file
+			cmdline_operation->dirname_out = NULL;
+			if (errno == ENOMEM) return -1;
+		}
+	}
+
+	char* filepath;
+	// itero sui file da leggere
+	list_for_each(cmdline_operation->files, filepath) {
+		// ottengo il path assoluto del file
+		char* abspath = get_absolute_path(filepath);
+		if (!abspath) {
+			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n",
+				filepath, strerror(errno));
+			if (errno == ENOMEM) return -1;
+			continue;
+		}
+
+		// invoco la funzione dell'api per aprire il file
+		int ret, errnosv;
+		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
+		RETRY_IF_BUSY(openFile(abspath, 0), ret);
+		if (ret == -1 && errno != EALREADY) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		// invoco la funzione dell'api per leggere il file
+		void* buf = NULL;
+		size_t size = 0;
+		PRINT("\nreadFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(readFile(abspath, &buf, &size), ret);
+		if (ret == -1) { 
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+
+		if (cmdline_operation->dirname_out && size != 0) {
+			// ottengo il nome del file letto
+			char* filename = get_basename(abspath);
+			if (!filename) {
+				if (errno == ENOMEM) return -1;
+				else continue;
+			}
+			// costruisco il path del file letto per poterlo memorizzare nella directory cmdline_operation->dirname_out
+			char* new_filepath = build_notexisting_path(cmdline_operation->dirname_out, filename);
+			if (!new_filepath) {
+				if (errno == ENOMEM) return -1;
+				else continue;
+			}
+			if (new_filepath) {
+				// creo il file
+				FILE * file = fopen(new_filepath, "w+");
+				if (file) {
+					// scrivo nel file
+					if (fwrite(buf, 1, size, file) != size) {
+						fprintf(stderr, "\nERR: fwrite '%s' (%s)\n",
+							new_filepath, strerror(errno));
+					}
+					// chiudo il file
+					if (fclose(file) == -1) {
+						fprintf(stderr, "\nERR: fclose '%s' (%s)\n",
+							new_filepath, strerror(errno));
+					}
+					PRINT(" (%zu bytes salvati in %s)", size, new_filepath);
+				}
+				else {
+					fprintf(stderr, "\nERR: fopen di '%s' con modalità w+ (%s)\n",
+						new_filepath, strerror(errno));
+				}
+				free(new_filepath);
+			}
+			else {
+				fprintf(stderr, "\nERR: build_notexisting_path per scrivere il file '%s' in '%s' (%s)\n",
+					filename, cmdline_operation->dirname_out, strerror(errno));
+			}
+			free(filename);
+		}
+		if (buf) 
+			free(buf);
+		if (errno == ENOMEM)
+			return -1;
+
+		// invoco la funzione dell'api per chiudere il file
+		PRINT("\ncloseFile(pathname = %s)", abspath);
+		RETRY_IF_BUSY(closeFile(abspath), ret);
+		if (ret == -1) {
+			errnosv = errno;
+			free(abspath);
+			if (errnosv == EBADRQC) return 1;
+			else if (should_exit(errnosv)) return -1;
+			else continue;
+		}
+		free(abspath);
+	}
+	return 0;
+}
+
+/**
  * @function                   lock_file_list()
  * @brief                      Esegue l'operazione 'l'.
  * 
@@ -408,10 +533,12 @@ int main(int argc, char* argv[]) {
 		switch (cmdline_operation->operation) {
 			case 'w':
 			case 'a':
-			case 'r':
 				break;
 			case 'W':
 				r = write_file_list(cmdline_operation);
+				break;
+			case 'r':
+				r = read_file_list(cmdline_operation);
 				break;
 			case 'R':
 				r = read_n_files(cmdline_operation);
