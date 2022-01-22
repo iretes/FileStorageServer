@@ -19,7 +19,7 @@ list_t* list_create(int (*compare)(void *, void*), void (*free_data)(void*)) {
 	if (!l) 
 		return NULL;
 
-	l->head = l->tail = NULL;   
+	l->head = l->tail = NULL;
 	l->compare = compare;
 	l->free_data = free_data;
 	l->len = 0;
@@ -82,7 +82,7 @@ void* list_tail_remove(list_t* list) {
 		prev = curr;
 		curr = curr->next;
 	}
-    
+
 	void* data = curr->data;
 	if (!prev) {
 		list->head = list->tail = NULL;
@@ -161,8 +161,8 @@ void* list_remove_and_get(list_t* list, void* data) {
 	void* res = curr->data;
 	if (!prev) {
 		list->head = list->head->next;
-	if (list->head == NULL)
-		list->tail = NULL;
+		if (list->head == NULL)
+			list->tail = NULL;
 	}
 	else if (!curr->next) {
 		prev->next = NULL;

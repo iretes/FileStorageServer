@@ -1,17 +1,19 @@
 /**
- * @file     client_api.c
- * @brief    Implementazione dell'api del client
+ * @file                   client_api.c
+ * @brief                  Implementazione dell'api del client
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <limits.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include <client_api.h>
 #include <protocol.h>
@@ -67,10 +69,10 @@ char* errno_to_str(int err) {
 }
 
 /**
- * @function      set_errno()
- * @brief         Setta errno in base al codice di risposta ricevuto
+ * @function               set_errno()
+ * @brief                  Setta errno in base al codice di risposta ricevuto.
  * 
- * @param code    Il codice di rispsota ricevuto dal server
+ * @param code             Il codice di rispsota ricevuto dal server.
  */
 static void set_errno(response_code_t code) {
 	switch (code) {
@@ -112,14 +114,14 @@ static void set_errno(response_code_t code) {
 }
 
 /**
- * @function      send_reqcode()
- * @brief         Invia al server il codice di richiesta code
+ * @function               send_reqcode()
+ * @brief                  Invia al server il codice di richiesta code.
  * 
- * @param code    Il codice di richiesta da inviare al server
- * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                In caso di fallimento errno può assumere i seguenti valori:
- *                ECOMM       se si è verificato un errore lato client durante la scrittura sulla socket
- *                ECONNRESET  se il server ha chiuso la connessione
+ * @param code             Il codice di richiesta da inviare al server
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM       se si è verificato un errore lato client durante la scrittura sulla socket
+ *                         ECONNRESET  se il server ha chiuso la connessione
  */
 static int send_reqcode(request_code_t code) {
 	int r;
@@ -135,14 +137,14 @@ static int send_reqcode(request_code_t code) {
 }
 
 /**
- * @function          send_pathname()
- * @brief             Invia al server il path di un file
+ * @function               send_pathname()
+ * @brief                  Invia al server il path di un file.
  * 
- * @param pathname    Path del file da inviare al server
- * @return            0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    ECOMM         se si è verificato un errore lato client durante la scrittura sulla socket
- *                    ECONNRESET    se il server ha chiuso la connessione
+ * @param pathname         Path del file da inviare al server
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM         se si è verificato un errore lato client durante la scrittura sulla socket
+ *                         ECONNRESET    se il server ha chiuso la connessione
  */
 static int send_pathname(const char* pathname) {
 	size_t pathname_len = strlen(pathname) + 1;
@@ -164,16 +166,16 @@ static int send_pathname(const char* pathname) {
 }
 
 /**
- * @function      send_file_content()
- * @brief         Invia al server il contenuto di un file
+ * @function               send_file_content()
+ * @brief                  Invia al server il contenuto di un file.
  * 
- * @param buf     Contenuto del file da inviare
- * @param size    Dimensione del contenuto del file
+ * @param buf              Contenuto del file da inviare
+ * @param size             Dimensione del contenuto del file
  * 
- * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                In caso di fallimento errno può assumere i seguenti valori:
- *                ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
- *                ECONNRESET   se il server ha chiuso la connessione
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
+ *                         ECONNRESET   se il server ha chiuso la connessione
  */
 static int send_file_content(void* buf, size_t size) {
 	int r;
@@ -194,15 +196,15 @@ static int send_file_content(void* buf, size_t size) {
 }
 
 /**
- * @function send_N()
- * @brief      Invia al server il valore del parametro N
+ * @function               send_N()
+ * @brief                  Invia al server il valore del parametro N.
  * 
- * @param N    Intero da inviare al server
+ * @param N                Intero da inviare al server
  * 
- * @return     0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *             In caso di fallimento errno può assumere i seguenti valori:
- *             ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
- *             ECONNRESET   se il server ha chiuso la connessione
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
+ *                         ECONNRESET   se il server ha chiuso la connessione
  */
 static int send_N(int N) {
 	int r;
@@ -218,15 +220,15 @@ static int send_N(int N) {
 }
 
 /**
- * @function      receive_respcode()
- * @brief         Riceve dal server il codice di risposta
+ * @function                receive_respcode()
+ * @brief                   Riceve dal server il codice di risposta.
  * 
- * @param code    Codice di risposta ricevuto
+ * @param code              Codice di risposta ricevuto
  * 
- * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                In caso di fallimento errno può assumere i seguenti valori:
- *                ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
- *                ECONNRESET   se il server ha chiuso la connessione
+ * @return                  0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                          In caso di fallimento errno può assumere i seguenti valori:
+ *                          ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
+ *                          ECONNRESET   se il server ha chiuso la connessione
  */
 static int receive_respcode(response_code_t* code) {
 	int r;
@@ -244,15 +246,15 @@ static int receive_respcode(response_code_t* code) {
 }
 
 /**
- * @function      receive_size()
- * @brief         Riceve dal server il valore di un size_t
+ * @function               receive_size()
+ * @brief                  Riceve dal server il valore di un size_t.
  * 
- * @param size    size_t ricevuto
+ * @param size             size_t ricevuto
  * 
- * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                In caso di fallimento errno può assumere i seguenti valori:
- *                ECOMM         se si è verificato un errore lato client durante la scrittura sulla socket
- *                ECONNRESET    se il server ha chiuso la connessione
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM         se si è verificato un errore lato client durante la scrittura sulla socket
+ *                         ECONNRESET    se il server ha chiuso la connessione
  */
 static int receive_size(size_t* size) {
 	int r;
@@ -270,17 +272,18 @@ static int receive_size(size_t* size) {
 }
 
 /**
- * @function          receive_pathname()
- * @brief             Riceve dal server il path di un file
+ * @function               receive_pathname()
+ * @brief                  Riceve dal server il path di un file.
  * 
- * @param pathname    Path ricevuto
- * @param size        Dimensione del path ricevuto
+ * @param pathname         Path ricevuto
+ * @param size             Dimensione del path ricevuto
  * 
- * @return            0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                    In caso di fallimento errno può assumere i seguenti valori:
- *                    ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
- *                    ECONNRESET    se il server ha chiuso la connessione
- *                    EPROTO        se si è verificato un errore di protocollo
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare 
+ *                                       l'operazione
+ *                         ECONNRESET    se il server ha chiuso la connessione
+ *                         EPROTO        se si è verificato un errore di protocollo
  */
 static int receive_pathname(char** pathname, size_t* size) {
 	int r;
@@ -318,16 +321,17 @@ static int receive_pathname(char** pathname, size_t* size) {
 }
 
 /**
- * @function      receive_file_content()
- * @brief         Riceve dal server il contenuto di un file
+ * @function               receive_file_content()
+ * @brief                  Riceve dal server il contenuto di un file.
  * 
- * @param buf     Contenuto del file ricevuto
- * @param size    Dimensione del contenuto del file ricevuto
- * 
- * @return        0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                In caso di fallimento errno può assumere i seguenti valori:
- *                ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
- *                ECONNRESET    se il server ha chiuso la connessione
+ * @param buf              Contenuto del file ricevuto
+ * @param size             Dimensione del contenuto del file ricevuto
+ *
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare 
+ *                                       l'operazione
+ *                         ECONNRESET    se il server ha chiuso la connessione
  */
 static int receive_file_content(void** buf, size_t* size) {
 	int r;
@@ -363,7 +367,7 @@ static int receive_file_content(void** buf, size_t* size) {
 
 /**
  * @function               receive_files()
- * @brief                  Riceve dal server dei file e li memorizza nella directory dirname ( se diversa da @c NULL )
+ * @brief                  Riceve dal server dei file e li memorizza nella directory dirname ( se diversa da @c NULL ).
  * 
  * @param dirname          La directory in cui memorizzare i file ricevuti, se @c NULL i file ricevuti non vengono memorizzati
  * @param file_received    Il numero di file ricevuti
@@ -461,20 +465,21 @@ static int receive_files(const char* dirname, int* num_file_received) {
 }
 
 /**
- * @function          do_simple_request()
- * @brief             Invia al server il codice di richiesta req_code e il path del file relativo alla richiesta,
- *                    attende la ricezione del codice di risposta e setta errno in base al codice ricevuto.
+ * @function               do_simple_request()
+ * @brief                  Invia al server il codice di richiesta req_code e il path del file relativo alla richiesta,
+ *                         attende la ricezione del codice di risposta e setta errno in base al codice ricevuto.
  * 
- * @param req_code    Codice di richiesta da inviare
- * @param pathname    Path del file da inviare
+ * @param req_code         Codice di richiesta da inviare
+ * @param pathname         Path del file da inviare
  * 
- * @return            0 in caso di successo, -1 in caso di fallimento.
- *                    Errno viene settato nel caso in cui si sono verificati errori che non hanno reso possibile completare 
- *                    l'operazione e nel caso in cui la risposta ricevuta dal server segnala l'esito negativo dell'operazione 
- *                    richiesta.
- *                    Errno può assumere i seguenti valori:
- *                    ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare l'operazione
- *                    ECONNRESET    se il server ha chiuso la connessione
+ * @return                 0 in caso di successo, -1 in caso di fallimento.
+ *                         Errno viene settato nel caso in cui si sono verificati errori che non hanno reso possibile 
+ *                         completare l'operazione e nel caso in cui la risposta ricevuta dal server segnala l'esito 
+ *                         negativo dell'operazione richiesta.
+ *                         Errno può assumere i seguenti valori:
+ *                         ECOMM         se si è verificato un errore lato client che non ha reso possibile effettuare 
+ *                                       l'operazione
+ *                         ECONNRESET    se il server ha chiuso la connessione
  */
 static int do_simple_request(request_code_t req_code, const char* pathname) {
 	// invio al server il codice di richiesta
@@ -509,7 +514,7 @@ bool is_printing_enable() {
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime) {
 	if (!sockname || strlen(sockname) > (UNIX_PATH_MAX-1) || strlen(sockname) == 0 ||
-		msec < 0 || abstime.tv_sec < 0 || abstime.tv_nsec < 0 || abstime.tv_nsec >= 1000000000) { 
+		msec < 0 || abstime.tv_sec < 0 || abstime.tv_nsec < 0 || abstime.tv_nsec >= 1000000000) {
 		errno = EINVAL;
 		return -1;
 	} 
@@ -630,7 +635,7 @@ int closeConnection(const char* sockname) {
 }
 
 int openFile(const char* pathname, int flags) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
 		pathname != strchr(pathname, '/') ||strchr(pathname, ',') != NULL) {
 		errno = EINVAL;
 		return -1;
@@ -667,8 +672,8 @@ int openFile(const char* pathname, int flags) {
 }
 
 int readFile(const char* pathname, void** buf, size_t* size) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
-		strchr(pathname, ',') != NULL || pathname != strchr(pathname, '/') || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
+		strchr(pathname, ',') != NULL || pathname != strchr(pathname, '/') ||
 		!buf || !size) {
 		errno = EINVAL;
 		return -1;
@@ -711,7 +716,7 @@ int readNFiles(int N, const char* dirname) {
 			default:
 				errno = ECOMM;
 		}
-		return -1; 
+		return -1;
 	}
 
 	request_code_t req_code = READN;
@@ -740,7 +745,7 @@ int readNFiles(int N, const char* dirname) {
 }
 
 int writeFile(const char* pathname, const char* dirname) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
 		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL ||
 		(dirname && strlen(dirname) == 0) || (dirname && strlen(dirname) > (PATH_MAX-1))) {
 		errno = EINVAL;
@@ -868,10 +873,10 @@ int writeFile(const char* pathname, const char* dirname) {
 }
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
 		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL ||
-		(size != 0 && !buf) || 
-		(dirname && strlen(dirname) == 0) || 
+		(size != 0 && !buf) ||
+		(dirname && strlen(dirname) == 0) ||
 		(dirname && strlen(dirname) > (PATH_MAX-1))) {
 		errno = EINVAL;
 		return -1;
@@ -927,7 +932,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 }
 
 int lockFile(const char* pathname) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
 		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
 		errno = EINVAL;
 		return -1;
@@ -948,7 +953,7 @@ int lockFile(const char* pathname) {
 }
 
 int unlockFile(const char* pathname) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
 		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
 		errno = EINVAL;
 		return -1;
@@ -967,7 +972,7 @@ int unlockFile(const char* pathname) {
 }
 
 int closeFile(const char* pathname) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
 		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
 		errno = EINVAL;
 		return -1;
@@ -986,7 +991,7 @@ int closeFile(const char* pathname) {
 }
 
 int removeFile(const char* pathname) {
-	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) || 
+	if (!pathname || strlen(pathname) == 0 || strlen(pathname) > (PATH_MAX-1) ||
 		pathname != strchr(pathname, '/') || strchr(pathname, ',') != NULL) {
 		errno = EINVAL;
 		return -1;

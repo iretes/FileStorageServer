@@ -8,43 +8,43 @@
 #include <util.h>
 
 int int_cmp(void* a, void* b) {
-    return ((*(int*)a - *(int*)b) == 0);
+	return ((*(int*)a - *(int*)b) == 0);
 }
 
 int readn(long fd, void *buf, size_t size) {
-    size_t left = size;
-    int r;
-    char *bufptr = (char*)buf;
-    while (left > 0) {
-        if ((r = read((int)fd, bufptr, left)) == -1) {
-            if (errno == EINTR) // proseguo in caso di ricezione di interruzione 
-                continue;
-            return -1;
-        }
-        if (r == 0) // EOF
-            return 0; 
-        left -= r;
-        bufptr += r;
-    }
-    return size;
+	size_t left = size;
+	int r;
+	char *bufptr = (char*)buf;
+	while (left > 0) {
+		if ((r = read((int)fd, bufptr, left)) == -1) {
+			if (errno == EINTR) // proseguo in caso di ricezione di interruzione 
+				continue;
+			return -1;
+		}
+		if (r == 0) // EOF
+			return 0;
+		left -= r;
+		bufptr += r;
+	}
+	return size;
 }
 
 int writen(long fd, void *buf, size_t size) {
-    size_t left = size;
-    int r;
-    char *bufptr = (char*)buf;
-    while (left > 0) {
-        if ((r = write((int)fd ,bufptr,left)) == -1) {
-            if (errno == EINTR) // proseguo in caso di ricezione di interruzione 
-                continue;
-            return -1;
-        }
-        if (r == 0) // EOF
-            return 0;  
-        left -= r;
-        bufptr += r;
-    }
-    return 1;
+	size_t left = size;
+	int r;
+	char *bufptr = (char*)buf;
+	while (left > 0) {
+		if ((r = write((int)fd ,bufptr,left)) == -1) {
+			if (errno == EINTR) // proseguo in caso di ricezione di interruzione 
+				continue;
+			return -1;
+		}
+		if (r == 0) // EOF
+			return 0;
+		left -= r;
+		bufptr += r;
+	}
+	return 1;
 }
 
 int is_number(const char* s, long* n) {

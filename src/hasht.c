@@ -224,8 +224,8 @@ void* hasht_delete_and_get(hasht_t *ht, void* key, void (*free_key)(void*)) {
 			free(curr);
 			return value;
 		}
-			prev = curr;
-			curr = curr->next;
+		prev = curr;
+		curr = curr->next;
 	}
 
 	return NULL;
