@@ -294,7 +294,6 @@ static void destroy_file(file_t* file) {
 	if (file->open_by_fds != NULL)
 		int_list_destroy(file->open_by_fds);
 	free(file);
-	file = NULL;
 }
 
 /**
@@ -376,7 +375,6 @@ static void destroy_evicted_file(evicted_file_t* evicted_file) {
 	if (evicted_file->pending_lock_fds)
 		int_list_destroy(evicted_file->pending_lock_fds);
 	free(evicted_file);
-	evicted_file = NULL;
 }
 
 /**
@@ -451,7 +449,6 @@ static void destroy_client(client_t* client) {
 	if (client->locked_files)
 		list_destroy(client->locked_files, LIST_DO_NOT_FREE_DATA);
 	free(client);
-	client = NULL;
 }
 
 storage_t* create_storage(config_t* config, logger_t* logger) {
@@ -529,7 +526,6 @@ void destroy_storage(storage_t* storage) {
 		conc_hasht_destroy(storage->connected_clients, NULL, (void (*)(void*)) destroy_client);
 	pthread_mutex_destroy(&(storage->mutex));
 	free(storage);
-	storage = NULL;
 }
 
 int new_connection_handler(storage_t* storage, int client_fd) {

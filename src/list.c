@@ -40,7 +40,6 @@ void list_destroy(list_t* list, int free_data) {
 	}
 
 	free(list);
-	list = NULL;
 }
 
 int list_tail_insert(list_t* list, void* data) {

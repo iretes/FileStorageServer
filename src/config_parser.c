@@ -127,7 +127,6 @@ void config_destroy(config_t* config) {
 	if (config->log_file_path)
 		free(config->log_file_path);
 	free(config);
-	config = NULL;
 }
 
 int config_parser(config_t *config, char* filepath) {
@@ -265,6 +264,9 @@ int config_parser(config_t *config, char* filepath) {
 			else if (strcmp(value, eviction_policy_to_str(LFU)) == 0) {
 				config->eviction_policy = LFU;
 			}
+			else if (strcmp(value, eviction_policy_to_str(LW)) == 0) {
+				config->eviction_policy = LW;
+			}
 			else {
 				fprintf(stderr, "ERR: '%s' non è una politica di espulsione valida\n", value);
 				goto config_parser_exit;
@@ -286,13 +288,10 @@ int config_parser(config_t *config, char* filepath) {
 	}
 
 	fclose(f);
-		return 0;
+	return 0;
 
 config_parser_exit:
-	if (config->socket_path)
-		free(config->socket_path);
-	if (config->log_file_path)
-		free(config->log_file_path);
+	config_destroy(config);
 	fclose(f);
 	return -1;
 }

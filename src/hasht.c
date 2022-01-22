@@ -84,7 +84,6 @@ void hasht_destroy(hasht_t *ht, void (*free_key)(void*), void (*free_value)(void
 	if (ht->buckets) 
 		free(ht->buckets);
 	free(ht);
-	ht = NULL;
 }
 
 int hasht_contains(hasht_t *ht, void* key) {

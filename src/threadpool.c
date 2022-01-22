@@ -84,8 +84,7 @@ void free_pool_resources(threadpool_t *pool) {
 	free_task_list(pool->lhead);
 	pthread_mutex_destroy(&(pool->lock));
 	pthread_cond_destroy(&(pool->cond));
-	free(pool);  
-	pool = NULL;  
+	free(pool);
 }
 
 threadpool_t* threadpool_create(size_t numthreads, size_t pending_size) {

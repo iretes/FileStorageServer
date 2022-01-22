@@ -45,7 +45,6 @@ void cmdline_operation_destroy(cmdline_operation_t* cmdline_operation) {
 	if (cmdline_operation->source_file)
 		free(cmdline_operation->source_file);
 	free(cmdline_operation);
-	cmdline_operation = NULL;
 }
 
 int cmdline_operation_cmp(void* a, void* b) {

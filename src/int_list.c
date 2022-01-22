@@ -41,7 +41,6 @@ void int_list_destroy(int_list_t* int_list) {
 
 	list_destroy(int_list->list, 1);
 	free(int_list);
-	int_list = NULL;
 }
 
 int int_list_tail_insert(int_list_t* int_list, int data) {

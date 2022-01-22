@@ -95,7 +95,6 @@ void conc_hasht_destroy(conc_hasht_t *cht, void (*free_key)(void*), void (*free_
 	if (cht->mutex_attrs)
 		free(cht->mutex_attrs);
 	free(cht);
-	cht = NULL;
 }
 
 int conc_hasht_contains(conc_hasht_t *cht, void* key) {

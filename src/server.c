@@ -392,6 +392,7 @@ int main(int argc, char *argv[]) {
 	// effettuo il parsing del file di configurazione
 	EQNULL_DO(config_init(), config, EXTF);
 	if (config_parser(config, config_file) == -1) {
+		config = NULL;
 		extval = EXIT_FAILURE;
 		goto server_exit;
 	}

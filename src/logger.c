@@ -98,5 +98,4 @@ void logger_destroy(logger_t* logger) {
 	fclose(logger->file);
 	pthread_mutex_destroy(&(logger->mutex));
 	free(logger);
-	logger = NULL;
 }
