@@ -1,8 +1,18 @@
+/**
+ * @file     client.c
+ * @brief    Implementazione del client. Effettua il parsing degli argomenti della linea di comando e invoca le funzioni 
+ *           della api per interagire con il server.
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
+#include <limits.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include <client_api.h>
 #include <cmdline_operation.h>
@@ -59,6 +69,107 @@ static inline bool should_exit(int err) {
 	if (errno == ECONNRESET || errno == ECOMM || errno == EBUSY)
 		return true;
 	return false;
+}
+
+/**
+ * @function         visit_dir()
+ * @brief            Visita ricorsivamente la directory dirname fino ad aver visitato limit file regolari. 
+ *                   Se la directory presenta un numero di file regolari minore di limit o limit vale 0 
+ *                   visita ricrosivamente tutta la directory. Memorizza i path dei file visitati nella lista files.
+ * 
+ * @param dirname    Il path della directory da visitare
+ * @param limit      Il massimo numero di file da visitare, 0 se si intende visitare tutto il contenuto della directory
+ * @param files      La lista in cui vengono memorizzati i files visitati
+ * 
+ * @return           Il numero di file visitati in caso di successo, 
+ *                   altrimenti in caso di fallimento ritorna -1 se si è verificato un errore che dovrà essere gestito 
+ *                   terminando il processo, -2 se si è verificato un errore ma è possibile effettuare le eventuali 
+ *                   operazioni successive.
+ */
+static int visit_dir(char* dirname, size_t limit, list_t* files) {
+	int r;
+	// apro la directory dirname
+	DIR* dir = opendir(dirname);
+	if (!dir) {
+		fprintf(stderr, "\nERR: opendir di '%s' (%s)\n", dirname, strerror(errno));
+		if (errno == ENOMEM)
+			return -1;
+		return -2;
+	}
+
+	struct dirent* file;
+	size_t file_visited = 0;
+
+	/* continuo a leggere il contenuto della directory fino a che non ho letto limit file oppure se limit è 0 o la 
+	   directory presenta un numero di file minore di limit fino ad avere letto tutto il contenuto */
+	while ((limit == 0 || file_visited < limit) && (errno = 0, file = readdir(dir)) != NULL) {
+		// ignoro la directory corrente e quella padre
+		if (is_dot(file->d_name))
+			continue;
+
+		// costruisco il path del file corrente
+		int len1 = strlen(dirname);
+		int len2 = strlen(file->d_name);
+		if ((len1 + len2 + 2) > PATH_MAX) {
+			fprintf(stderr, "\nERR: il filepath '%s' è troppo lungo\n", file->d_name);
+			continue;
+		}
+		char* pathname = NULL;
+		if ((pathname = calloc(len1 + len2 + 2, sizeof(char))) == NULL) {
+			fprintf(stderr, "\nERR: calloc (%s)\n", strerror(errno));
+			return -1;
+		}
+		strcpy(pathname, dirname);
+		if (dirname[len1-1] != '/')
+			strcat(pathname, "/");
+		strcat(pathname, file->d_name);
+
+		// recupero i metadati del file corrente
+		struct stat statbuf;
+		if (stat(pathname, &statbuf) == -1) {
+			fprintf(stderr, "\nERR: stat di '%s' (%s)\n", pathname, strerror(errno));
+			free(pathname);
+			if (errno == ENOMEM)
+				return -1;
+			continue;
+		}
+
+		// se il file corrente è una directory la visito ricorsivamente modificando limit
+		if (S_ISDIR(statbuf.st_mode)) {
+			int ret = visit_dir(pathname, limit - file_visited, files);
+			free(pathname);
+			if (ret < 0)
+				return ret;
+			// incremento il numero di file visitati con quelli visitati nella chiamata ricorsiva
+			file_visited += ret;
+		}
+		else {
+			// se il file corrente non è un file regolare lo ignoro
+			if (!S_ISREG(statbuf.st_mode))
+				continue;
+			// inserisco il file corrente nella lista dei file visitati
+			if ((r = list_tail_insert(files, pathname)) != 0) {
+				fprintf(stderr, "\nERR: list_tail_insert (%s)\n", strerror(errno));
+				free(pathname);
+				return -1;
+			}
+			// incremento il numero di file visitati
+			file_visited += 1;
+		}
+	}
+	// controllo se la visita della directory è terminata con successo o se si è verificato un errore
+	if (!file && errno != 0) {
+		fprintf(stderr, "\nERR: readdir di '%s' (%s)\n", dirname, strerror(errno));
+		r = -2;
+	}
+	// chiudo la directory
+	if (closedir(dir) == -1) {
+		fprintf(stderr, "\nERR: closedir di '%s' (%s)\n", dirname, strerror(errno));
+		return -2;
+	}
+	if (r != -2)
+		r = file_visited;
+	return r;
 }
 
 /**
@@ -126,6 +237,39 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		free(abspath);
 	}
 	return 0;
+}
+
+/**
+ * @function                   write_files_dir()
+ * @brief                      Esegue l'operazione 'W'.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+static int write_files_dir(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation || !cmdline_operation->dirname_in) {
+		fprintf(stderr, "\nERR: argomenti non validi per l'opzione -w\n");
+		return 1;
+	}
+	if (cmdline_operation->n < 0)
+		cmdline_operation->n = 0;
+
+	// inizializzo una lista in cui salvare i path dei file durante la visita della directory
+	cmdline_operation->files = list_create((int (*)(void*, void*))strcmp, free);
+	if (!cmdline_operation->files) {
+		fprintf(stderr, "\nERR: list_create (%s)\n", strerror(errno));
+		return -1;
+	}
+
+	int ret = visit_dir(cmdline_operation->dirname_in, cmdline_operation->n, cmdline_operation->files);
+	if (ret < 0) {
+		if (ret == -1) return -1;
+		else return 1;
+	}
+	return write_file_list(cmdline_operation);
 }
 
 /**
@@ -532,6 +676,8 @@ int main(int argc, char* argv[]) {
 	list_for_each(cmdline_operation_list, cmdline_operation) {
 		switch (cmdline_operation->operation) {
 			case 'w':
+				r = write_files_dir(cmdline_operation);
+				break;
 			case 'a':
 				break;
 			case 'W':
