@@ -1,6 +1,6 @@
 /**
- * @file    config.h
- * @brief   Interfaccia per il parsing del file di configurazione.
+ * @file                     config.h
+ * @brief                    Interfaccia per il parsing del file di configurazione.
  */
 
 #ifndef CONFIG_H
@@ -53,18 +53,18 @@
 #define CONFIG_LINE_SIZE 1024
 
 /**
- * @struct                  config_t
- * @brief                   Parametri di configurazione.
+ * @struct                   config_t
+ * @brief                    Parametri di configurazione.
  *
- * @var n_workers           Numero di thread workers
- * @var dim_workers_queue   Dimensione massima della coda di task pendenti del pool
- * @var max_file_num        Massimo numero di file memorizzabili
- * @var max_bytes           Massimo numero di bytes memorizzabili
- * @var max_locks           Massimo numero di lock da utilizzare per l'accesso ai files
- * @var expected_clients    Numero atteso di client contemporaneamente connessi
- * @var socket_path         Path della socket per la connessione con i clienti
- * @var log_file_path       Path del file di log
- * @var eviction_policy     Politica di espulsione
+ * @var n_workers            Numero di thread workers
+ * @var dim_workers_queue    Dimensione massima della coda di task pendenti del pool
+ * @var max_file_num         Massimo numero di file memorizzabili
+ * @var max_bytes            Massimo numero di bytes memorizzabili
+ * @var max_locks            Massimo numero di lock da utilizzare per l'accesso ai files
+ * @var expected_clients     Numero atteso di client contemporaneamente connessi
+ * @var socket_path          Path della socket per la connessione con i clienti
+ * @var log_file_path        Path del file di log
+ * @var eviction_policy      Politica di espulsione
  */
 typedef struct config {
 	size_t n_workers;
@@ -79,31 +79,31 @@ typedef struct config {
 } config_t;
 
 /**
- * @function    config_init()
- * @brief       Inizializza la struttura config_t.
+ * @function                 config_init()
+ * @brief                    Inizializza la struttura config_t.
  * 
- * @return      Un puntatore a una struttura config_t in caso di successo, 
- *              -1 in caso di fallimento con errno settato ad indicare l'errore.
- * @note        Può fallire e settare errno se si verificano gli errori specificati da malloc().
+ * @return                   Un puntatore a una struttura config_t in caso di successo, 
+ *                           -1 in caso di fallimento con errno settato ad indicare l'errore.
+ * @note                     Può fallire e settare errno se si verificano gli errori specificati da malloc().
  */
 config_t* config_init();
 
 /**
- * @function        config_destroy()
- * @brief           Distrugge la struttura config deallocando la memoria.
+ * @function                 config_destroy()
+ * @brief                    Distrugge la struttura config deallocando la memoria.
  * 
- * @param config    Puntatore alla struttura config_t da distruggere
+ * @param config             Puntatore alla struttura config_t da distruggere
  */
 void config_destroy(config_t* config);
 
 /**
- * @function        config_parse()
- * @brief           Effettua il parsing del file di configurazione.
+ * @function                 config_parse()
+ * @brief                    Effettua il parsing del file di configurazione.
  *
- * @param config    Puntatore alla struttura che raccoglie i parametri di configurazione
- * @param filepath  Path del file di configurazione
+ * @param config             Puntatore alla struttura che raccoglie i parametri di configurazione
+ * @param filepath           Path del file di configurazione
  *
- * @return          0 in caso di successo, -1 in caso di fallimento.
+ * @return                   0 in caso di successo, -1 in caso di fallimento.
  */
 int config_parser(config_t *config, char* filepath);
 

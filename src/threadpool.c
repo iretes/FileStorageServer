@@ -8,8 +8,8 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include <util.h>
 #include <threadpool.h>
+#include <util.h>
 
 /**
  * @function    workerpool_thread

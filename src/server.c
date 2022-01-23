@@ -11,11 +11,11 @@
 #include <config_parser.h>
 #include <eviction_policy.h>
 #include <protocol.h>
-#include <util.h>
-#include <threadpool.h>
 #include <logger.h>
 #include <log_format.h>
+#include <threadpool.h>
 #include <storage_server.h>
+#include <util.h>
 
 /**
  * Numero massimo di connessioni in sospeso nella coda di ascolto del socket
@@ -398,13 +398,6 @@ int main(int argc, char *argv[]) {
 	free(config_file);
 	config_file = NULL;
 
-	// creo l'oggetto logger
-	logger_t* logger = logger_create(config->log_file_path, INIT_LINE);
-	if (!logger) {
-		extval = EXIT_FAILURE;
-		goto server_exit;
-	}
-
 	// stampo i valori di configurazione
 	printf("=========== VALORI DI CONFIGURAZIONE ===========\n");
 	printf("%s = %zu\n", N_WORKERS_STR, config->n_workers);
@@ -428,6 +421,13 @@ int main(int argc, char *argv[]) {
 	EQM1_DO(bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)), r, extval = EXIT_FAILURE; goto server_exit);
 	EQM1_DO(listen(listenfd, MAXBACKLOG), r, EXTF);
 
+	// creo l'oggetto logger
+	logger_t* logger = logger_create(config->log_file_path, INIT_LINE);
+	if (!logger) {
+		extval = EXIT_FAILURE;
+		goto server_exit;
+	}
+
 	// creo il threadpool
 	threadpool_t *pool = NULL;
 	EQNULL_DO(threadpool_create(config->n_workers, config->dim_workers_queue), pool, EXTF);
@@ -438,7 +438,7 @@ int main(int argc, char *argv[]) {
 
 	// creo l'oggetto storage
 	storage_t* storage = NULL;
-	EQNULL_DO(create_storage(config, logger), storage, EXTF);
+	EQNULL_DO(storage_create(config, logger), storage, EXTF);
 
 	// maschere per la gestione del selettore
 	fd_set set, tmpset;
@@ -589,15 +589,16 @@ int main(int argc, char *argv[]) {
 	if (listenfd != -1)
 		EQM1(close(listenfd), r);
 	
+	// attendo la terminazione dei thread e distruggo il pool
 	threadpool_destroy(pool);
-	EQM1(unlink(config->socket_path), r);
-	NEQ0(pthread_join(sig_handler_thread, NULL), r);
-	NEQ0_DO(pthread_mutex_destroy(&sig_mutex), r, EXTF);
 
 	// stampo le statistiche
 	EQM1_DO(print_statistics(storage), r, EXTF);
 
-	destroy_storage(storage);
+	EQM1(unlink(config->socket_path), r);
+	NEQ0(pthread_join(sig_handler_thread, NULL), r);
+	NEQ0_DO(pthread_mutex_destroy(&sig_mutex), r, EXTF);
+	storage_destroy(storage);
 	logger_destroy(logger);
 	config_destroy(config);
 	return 0;

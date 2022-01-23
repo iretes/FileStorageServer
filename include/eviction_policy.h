@@ -1,6 +1,6 @@
 /**
- * @file    eviction_policy.h
- * @brief   Header per la definizione delle politiche di espulsione
+ * @file            eviction_policy.h
+ * @brief           Header per la definizione delle politiche di espulsione.
  */
 
 #ifndef EVICTION_POLICY_H
@@ -11,13 +11,13 @@
 #define RESIZE_OVERFLOW_FACTOR  0.5
 
 /**
- * @enum        eviction_policy_t
- * @brief       Enumerazione delle politiche di espulsione di file dallo storage.
+ * @enum            eviction_policy_t
+ * @brief           Enumerazione delle politiche di espulsione di file dallo storage.
  * 
- * @var FIFO    Politica first in first out
- * @var LRU     Politica least recently used
- * @var LFU     Politica least frequently used
- * @var LW      Politica least weighted
+ * @var FIFO        Politica first in first out
+ * @var LRU         Politica least recently used
+ * @var LFU         Politica least frequently used
+ * @var LW          Politica least weighted
  */
 typedef enum eviction_policy {
 	FIFO,

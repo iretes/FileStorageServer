@@ -9,8 +9,8 @@
 #include <errno.h>
 #include <time.h>
 
-#include <util.h>
 #include <logger.h>
+#include <util.h>
 
 /* Dimensione della stringa per il formato della data e dell'ora da stampare sul log. */
 #define TIME_STR_SIZE 20

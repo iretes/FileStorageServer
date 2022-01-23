@@ -1,6 +1,6 @@
 /**
- * @file    cmdline_parser.h
- * @brief   Intefaccia per il parsing degli argomenti della linea di comando del client
+ * @file                cmdline_parser.h
+ * @brief               Intefaccia per il parsing degli argomenti della linea di comando del client.
  */
 
 #ifndef CMDLINE_PARSER_H
@@ -9,8 +9,8 @@
 #include <list.h>
 
 /**
- * @function cmdline_parser()
- * @brief               Effettua il parsing degli argomenti della linea di comando del client
+ * @function            cmdline_parser()
+ * @brief               Effettua il parsing degli argomenti della linea di comando del client.
  * 
  * @param argc          Il numero di argomenti della linea di comando
  * @param argv          Gli argomenti della linea di comando

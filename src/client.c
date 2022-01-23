@@ -524,6 +524,43 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 }
 
 /**
+ * @function                   read_n_files()
+ * @brief                      Esegue l'operazione 'R'.
+ * 
+ * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
+ * 
+ * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
+ *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
+ *                             effettuare le eventuali operazioni successive.
+ */
+int read_n_files(cmdline_operation_t* cmdline_operation) {
+	if (!cmdline_operation) {
+		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		return 1;
+	}
+	if (cmdline_operation->dirname_out) {
+		// creo, se non esiste, la directory in cui memorizzare i file letti dal server
+		if (mkdirr(cmdline_operation->dirname_out) == -1) {
+			fprintf(stderr, "\nERR: mkdirr di '%s' (%s), i file ricevuti non saranno scritti su disco\n", 
+				cmdline_operation->dirname_out, strerror(errno));
+			cmdline_operation->dirname_out = NULL;
+			if (errno == ENOMEM) return -1;
+		}
+	}
+
+	// invoco la funzione dell'api per effettuare la readn
+	int ret;
+	PRINT("\nreadNFiles(N = %d)", cmdline_operation->n);
+	RETRY_IF_BUSY(readNFiles(cmdline_operation->n, cmdline_operation->dirname_out), ret);
+	if (ret == -1) { 
+		if (should_exit(errno)) return -1;
+		else return 1;
+	}
+	PRINT(" (%d file ricevuti)", ret);
+	return 0;
+}
+
+/**
  * @function                   lock_file_list()
  * @brief                      Esegue l'operazione 'l'.
  * 
@@ -689,43 +726,6 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 	return 0;
 }
 
-/**
- * @function                   read_n_files()
- * @brief                      Esegue l'operazione 'R'.
- * 
- * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
- * 
- * @return                     0 in caso di successo, in caso di fallimento ritorna -1 se si è verificato un errore che 
- *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
- *                             effettuare le eventuali operazioni successive.
- */
-int read_n_files(cmdline_operation_t* cmdline_operation) {
-	if (!cmdline_operation) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
-		return 1;
-	}
-	if (cmdline_operation->dirname_out) {
-		// creo, se non esiste, la directory in cui memorizzare i file letti dal server
-		if (mkdirr(cmdline_operation->dirname_out) == -1) {
-			fprintf(stderr, "\nERR: mkdirr di '%s' (%s), i file ricevuti non saranno scritti su disco\n", 
-				cmdline_operation->dirname_out, strerror(errno));
-			cmdline_operation->dirname_out = NULL;
-			if (errno == ENOMEM) return -1;
-		}
-	}
-
-	// invoco la funzione dell'api per effettuare la readn
-	int ret;
-	PRINT("\nreadNFiles(N = %d)", cmdline_operation->n);
-	RETRY_IF_BUSY(readNFiles(cmdline_operation->n, cmdline_operation->dirname_out), ret);
-	if (ret == -1) { 
-		if (should_exit(errno)) return -1;
-		else return 1;
-	}
-	PRINT(" (%d file ricevuti)", ret);
-	return 0;
-}
-
 int main(int argc, char* argv[]) {
 	int r;
 	int extval = EXIT_SUCCESS;
@@ -786,8 +786,6 @@ int main(int argc, char* argv[]) {
 	abstime.tv_nsec = 0;
 	abstime.tv_sec = curr_time + TRY_CONN_FOR_SEC;
 
-	enable_printing();
-
 	// invoco la funzione della api per l'apertura della connessione con il server
 	r = openConnection(sockname, RETRY_CONN_AFTER_MSEC, abstime);
 	PRINT("openConnection(sockname = %s) : %s",
@@ -804,11 +802,11 @@ int main(int argc, char* argv[]) {
 			case 'w':
 				r = write_files_dir(cmdline_operation);
 				break;
-			case 'a':
-				r = append_file_list(cmdline_operation);
-				break;
 			case 'W':
 				r = write_file_list(cmdline_operation);
+				break;
+			case 'a':
+				r = append_file_list(cmdline_operation);
 				break;
 			case 'r':
 				r = read_file_list(cmdline_operation);
@@ -846,8 +844,10 @@ int main(int argc, char* argv[]) {
 		goto exit;
 	}
 
-	return 0;
-
 exit:
+	if (sockname)
+		free(sockname);
+	if (cmdline_operation_list)
+		list_destroy(cmdline_operation_list, LIST_FREE_DATA);
 	return extval;
 }

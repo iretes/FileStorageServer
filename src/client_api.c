@@ -17,8 +17,8 @@
 
 #include <client_api.h>
 #include <protocol.h>
-#include <util.h>
 #include <filesys_util.h>
+#include <util.h>
 
 /** File descriptor associato al socket */
 int g_socket_fd = -1;

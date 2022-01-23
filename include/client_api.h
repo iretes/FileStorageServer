@@ -7,6 +7,7 @@
 #define CLIENT_API_H
 
 #include <stdio.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <time.h>
 

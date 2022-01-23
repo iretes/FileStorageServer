@@ -17,10 +17,10 @@
 #include <int_list.h>
 #include <conc_hasht.h>
 #include <eviction_policy.h>
-#include <util.h>
+#include <protocol.h>
 #include <logger.h>
 #include <log_format.h>
-#include <protocol.h>
+#include <util.h>
 
 /**
  * @struct                   storage_t
@@ -451,7 +451,7 @@ static void destroy_client(client_t* client) {
 	free(client);
 }
 
-storage_t* create_storage(config_t* config, logger_t* logger) {
+storage_t* storage_create(config_t* config, logger_t* logger) {
 	if (!config || config->max_file_num <= 0 || config->max_bytes <= 0 || 
 		config->max_locks <= 0 || config->expected_clients <= 0) {
 		errno = EINVAL;
@@ -515,7 +515,7 @@ storage_t* create_storage(config_t* config, logger_t* logger) {
 	return storage;
 }
 
-void destroy_storage(storage_t* storage) {
+void storage_destroy(storage_t* storage) {
 	if (!storage)
 		return;
 	if (storage->files_queue)
@@ -1274,7 +1274,7 @@ int open_file_handler(storage_t* storage,
 		ERRNOSET_DO(conc_hasht_get_value(storage->files_ht, file_path), file, EXTF);
 
 		if (file == NULL) {
-			// il non file esiste
+			// il file non esiste
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 				worker_id, req_code_to_str(mode), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
