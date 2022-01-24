@@ -1,3 +1,8 @@
+/**
+ * @file     server.c
+ * @brief    Implementazione del server.
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -288,8 +293,8 @@ static void usage(char* prog) {
 	printf("# (n intero, 0 < n <= %zu, se non specificato = %u)\n", SIZE_MAX, DEFAULT_MAX_FILES);
 	printf("%s=n;\n\n", MAX_FILE_NUM_STR);
 	printf("# Numero massimo di bytes che possono essere memorizzati nello storage\n");
-	printf("# (n intero, 0 < n <= %zu [circa %.0f MB], se non specificato = %u)\n", 
-	SIZE_MAX, (double) SIZE_MAX / BYTES_IN_A_MEGABYTE, DEFAULT_MAX_BYTES);
+	printf("# (n intero, 0 < n <= %zu, se non specificato = %u)\n", 
+	SIZE_MAX, DEFAULT_MAX_BYTES);
 	printf("%s=n;\n\n", MAX_BYTES_STR);
 	printf("# Numero massimo di lock che possono essere associate ai files\n");
 	printf("# (n intero, 0 < n <= %zu, se non specificato = %u)\n", 

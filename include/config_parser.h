@@ -1,5 +1,5 @@
 /**
- * @file                     config.h
+ * @file                     config_parser.h
  * @brief                    Interfaccia per il parsing del file di configurazione.
  */
 
@@ -23,7 +23,7 @@
 /* Chiave riconosciuta nel file di configurazione per il numero atteso di client contemporaneamente connessi */
 #define EXPECTED_CLIENTS_STR "expected_clients"
 /* Chiave riconosciuta nel file di configurazione per il path della socket */
-#define SOCKET_PATH_STR "socket_path_str"
+#define SOCKET_PATH_STR "socket_file_path"
 /* Chiave riconosciuta nel file di configurazione per il path del file di log */
 #define LOG_FILE_STR "log_file_path"
 /* Chiave riconosciuta nel file di configurazione per la politica di espulsione */

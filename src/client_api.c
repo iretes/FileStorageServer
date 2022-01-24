@@ -1,6 +1,6 @@
 /**
  * @file                   client_api.c
- * @brief                  Implementazione dell'api del client
+ * @brief                  Implementazione dell'api del client.
  */
 
 #include <stdlib.h>

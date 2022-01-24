@@ -1,3 +1,8 @@
+/**
+* @file     protocol.c
+* @brief    Implementazione di funzioni relative al protocollo tra client e server.
+*/
+
 #include <stdlib.h>
 
 #include <protocol.h>

@@ -1,7 +1,7 @@
 /**
- * @file     client.c
- * @brief    Implementazione del client. Effettua il parsing degli argomenti della linea di comando e invoca le funzioni 
- *           della api per interagire con il server.
+ * @file                       client.c
+ * @brief                      Implementazione del client. Effettua il parsing degli argomenti della linea di comando e
+ *                             invoca le funzioni della api per interagire con il server.
  */
 
 #include <stdlib.h>
@@ -32,11 +32,12 @@
 #define RETRY_REQ_AFTER_MSEC 1000
 
 /**
- * @def          RETRY_IF_BUSY()
- * @brief        Tenta al più MAX_REQ_TRIES volte la chiamata dell'api X nel caso in cui il server sia occupato.
+ * @def                        RETRY_IF_BUSY()
+ * @brief                      Tenta al più MAX_REQ_TRIES volte la chiamata dell'api X nel caso in cui il server sia
+ *                             occupato.
  * 
- * @param X      La chiamata dell'api
- * @param ret    Il valore ritornato da X
+ * @param X                    La chiamata dell'api
+ * @param ret                  Il valore ritornato da X
  */
 #define RETRY_IF_BUSY(X, ret) \
 	do { \
@@ -58,12 +59,12 @@
 	} while(0);
 
 /**
- * @function     should_exit()
- * @brief        Consente di stabilire in base al codice di errore err settato nella api se il processo deve terminare o può 
- *               proseguire l'esecuzione
+ * @function                   should_exit()
+ * @brief                      Consente di stabilire in base al codice di errore err settato nella api se il processo deve
+ *                             terminare o può proseguire l'esecuzione.
  * 
- * @param err    Codice di errore
- * @return       True se il processo deve terminare l'esecuzione, false atrimenti
+ * @param err                  Codice di errore
+ * @return                     True se il processo deve terminare l'esecuzione, false atrimenti.
  */
 static inline bool should_exit(int err) {
 	if (errno == ECONNRESET || errno == ECOMM || errno == EBUSY)
@@ -72,19 +73,21 @@ static inline bool should_exit(int err) {
 }
 
 /**
- * @function         visit_dir()
- * @brief            Visita ricorsivamente la directory dirname fino ad aver visitato limit file regolari. 
- *                   Se la directory presenta un numero di file regolari minore di limit o limit vale 0 
- *                   visita ricrosivamente tutta la directory. Memorizza i path dei file visitati nella lista files.
+ * @function                   visit_dir()
+ * @brief                      Visita ricorsivamente la directory dirname fino ad aver visitato limit file regolari. 
+ *                             Se la directory presenta un numero di file regolari minore di limit o limit vale 0 
+ *                             visita ricrosivamente tutta la directory. Memorizza i path dei file visitati nella lista
+ *                             files.
  * 
- * @param dirname    Il path della directory da visitare
- * @param limit      Il massimo numero di file da visitare, 0 se si intende visitare tutto il contenuto della directory
- * @param files      La lista in cui vengono memorizzati i files visitati
+ * @param dirname              Il path della directory da visitare
+ * @param limit                Il massimo numero di file da visitare, 0 se si intende visitare tutto il contenuto della 
+ *                             directory
+ * @param files                La lista in cui vengono memorizzati i files visitati
  * 
- * @return           Il numero di file visitati in caso di successo, 
- *                   altrimenti in caso di fallimento ritorna -1 se si è verificato un errore che dovrà essere gestito 
- *                   terminando il processo, -2 se si è verificato un errore ma è possibile effettuare le eventuali 
- *                   operazioni successive.
+ * @return                     Il numero di file visitati in caso di successo, 
+ *                             altrimenti in caso di fallimento ritorna -1 se si è verificato un errore che dovrà essere 
+ *                             gestito terminando il processo, -2 se si è verificato un errore ma è possibile effettuare le
+ *                             eventuali operazioni successive.
  */
 static int visit_dir(char* dirname, size_t limit, list_t* files) {
 	int r;
@@ -183,7 +186,6 @@ static int visit_dir(char* dirname, size_t limit, list_t* files) {
  *                             dovrà essere gestito terminando il processo, 1 se si è verificato un errore ma è possibile 
  *                             effettuare le eventuali operazioni successive.
  */
-
 static int write_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
 		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
