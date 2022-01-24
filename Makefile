@@ -1,78 +1,166 @@
 CC = gcc
-CFLAGS += -std=c99 -g -D_POSIX_C_SOURCE=2001012L -Wall -Werror 
+CFLAGS += -std=c99 -Wall -Werror -g -D_POSIX_C_SOURCE=2001012L
 SHELL = /bin/bash
-LIBSYS = -L. -lpthread
 
-OBJDIR = ./obj
-INCDIR = ./include
-BINDIR = ./bin
 SRCDIR = ./src
+INCDIR = ./include
+OBJDIR = ./obj
+LIBDIR = ./lib
+BINDIR = ./bin
 
 INCLUDES = -I $(INCDIR)
+TARGETS = $(BINDIR)/server $(BINDIR)/client
 
-TARGETS	= $(BINDIR)/client $(BINDIR)/server
+LIBSERVER = -llist -lhasht -lpool -llogger -lprotocol -lpthread
+LIBCLIENT = -llist -lclientapi -lprotocol
 
-.PHONY: all clean cleanall 
+SERVEROBJS = $(OBJDIR)/server.o \
+    $(OBJDIR)/storage_server.o \
+    $(OBJDIR)/eviction_policy.o \
+    $(OBJDIR)/config_parser.o \
+    $(OBJDIR)/util.o
 
-.SUFFIXES: .c .h
+CLIENTOBJS = $(OBJDIR)/client.o \
+    $(OBJDIR)/cmdline_operation.o \
+    $(OBJDIR)/cmdline_parser.o
+
+.PHONY: all clean cleanall
 
 all: $(TARGETS)
 
-CLIENTOBJS = $(OBJDIR)/client.o $(OBJDIR)/client_api.o $(OBJDIR)/cmdline_operation.o $(OBJDIR)/cmdline_parser.o \
-$(OBJDIR)/list.o $(OBJDIR)/util.o $(OBJDIR)/filesys_util.o
-SERVEROBJS = $(OBJDIR)/server.o $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o $(OBJDIR)/list.o $(OBJDIR)/int_list.o \
-$(OBJDIR)/eviction_policy.o $(OBJDIR)/config_parser.o $(OBJDIR)/util.o $(OBJDIR)/threadpool.o $(OBJDIR)/logger.o \
-$(OBJDIR)/storage_server.o $(OBJDIR)/protocol.o
-
-$(BINDIR)/client: $(CLIENTOBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^
-
-$(BINDIR)/server: $(SERVEROBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBSYS)
-
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
+	$(CC) $(CFLAGS) $(INCLUDES) -c -fPIC -o $@ $<
 
-$(OBJDIR)/server.o: $(SRCDIR)/server.c $(INCDIR)/hasht.h $(INCDIR)/conc_hasht.h $(INCDIR)/list.h $(INCDIR)/int_list.h \
-$(INCDIR)/eviction_policy.h $(INCDIR)/config_parser.h $(INCDIR)/util.h $(INCDIR)/protocol.h $(INCDIR)/threadpool.h \
-$(INCDIR)/logger.h $(INCDIR)/log_format.h $(INCDIR)/storage_server.h
+# FILE ESEGUIBILI
 
-$(OBJDIR)/client.o: $(SRCDIR)/client.c $(INCDIR)/client_api.h $(INCDIR)/cmdline_operation.h $(INCDIR)/cmdline_parser.h
+$(BINDIR)/server: $(SERVEROBJS) \
+    $(LIBDIR)/liblist.so \
+    $(LIBDIR)/libhasht.so \
+    $(LIBDIR)/libpool.so \
+    $(LIBDIR)/liblogger.so \
+    $(LIBDIR)/libprotocol.so
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(SERVEROBJS) -Wl,-rpath=$(LIBDIR) -L $(LIBDIR) $(LIBSERVER)
 
-$(OBJDIR)/cmdline_operation.o: $(SRCDIR)/cmdline_operation.c $(INCDIR)/cmdline_operation.h $(INCDIR)/list.h
+$(BINDIR)/client: $(CLIENTOBJS) \
+    $(LIBDIR)/liblist.so \
+    $(LIBDIR)/libclientapi.so \
+    $(LIBDIR)/libprotocol.so
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(CLIENTOBJS) -Wl,-rpath=$(LIBDIR) -L $(LIBDIR) $(LIBCLIENT)
 
-$(OBJDIR)/cmdline_parser.o: $(SRCDIR)/cmdline_parser.c $(INCDIR)/cmdline_parser.h $(INCDIR)/client_api.h \
-$(INCDIR)/cmdline_operation.h $(INCDIR)/list.h $(INCDIR)/protocol.h $(INCDIR)/util.h
+# LIBRERIE DINAMICHE
 
-$(OBJDIR)/hasht.o: $(SRCDIR)/hasht.c $(INCDIR)/hasht.h
+$(LIBDIR)/liblist.so: $(OBJDIR)/list.o $(OBJDIR)/int_list.o
+	$(CC) -shared -o $@ $^
 
-$(OBJDIR)/conc_hasht.o: $(SRCDIR)/conc_hasht.c $(INCDIR)/hasht.h $(INCDIR)/conc_hasht.h
+$(LIBDIR)/libhasht.so: $(OBJDIR)/hasht.o $(OBJDIR)/conc_hasht.o
+	$(CC) -shared -o $@ $^
 
-$(OBJDIR)/list.o: $(SRCDIR)/list.c $(INCDIR)/list.h
+$(LIBDIR)/libpool.so: $(OBJDIR)/threadpool.o
+	$(CC) -shared -o $@ $^
 
-$(OBJDIR)/int_list.o: $(SRCDIR)/int_list.c $(INCDIR)/list.h $(INCDIR)/int_list.h
+$(LIBDIR)/liblogger.so: $(OBJDIR)/logger.o
+	$(CC) -shared -o $@ $^
 
-$(OBJDIR)/util.o: $(SRCDIR)/util.c $(INCDIR)/util.h
+$(LIBDIR)/libprotocol.so: $(OBJDIR)/protocol.o
+	$(CC) -shared -o $@ $^
 
-$(OBJDIR)/eviction_policy.o: $(SRCDIR)/eviction_policy.c $(INCDIR)/eviction_policy.h
+$(LIBDIR)/libclientapi.so: $(OBJDIR)/client_api.o $(OBJDIR)/filesys_util.o $(OBJDIR)/util.o
+	$(CC) -shared -o $@ $^
 
-$(OBJDIR)/config_parser.o: $(SRCDIR)/config_parser.c $(INCDIR)/config_parser.h $(INCDIR)/protocol.h \
-$(INCDIR)/eviction_policy.h $(INCDIR)/util.h
+# DIPENDENZE FILE OGGETTO
 
-$(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c $(INCDIR)/threadpool.h $(INCDIR)/util.h
+$(OBJDIR)/server.o: $(SRCDIR)/server.c \
+    $(INCDIR)/config_parser.h \
+    $(INCDIR)/eviction_policy.h \
+    $(INCDIR)/log_format.h \
+    $(INCDIR)/logger.h \
+    $(INCDIR)/protocol.h \
+    $(INCDIR)/storage_server.h \
+    $(INCDIR)/threadpool.h \
+    $(INCDIR)/util.h
 
-$(OBJDIR)/logger.o: $(SRCDIR)/logger.c $(INCDIR)/util.h $(INCDIR)/logger.h
+$(OBJDIR)/storage_server.o: $(SRCDIR)/storage_server.c \
+    $(INCDIR)/storage_server.h \
+    $(INCDIR)/conc_hasht.h \
+    $(INCDIR)/config_parser.h \
+    $(INCDIR)/eviction_policy.h \
+    $(INCDIR)/hasht.h \
+    $(INCDIR)/int_list.h \
+    $(INCDIR)/list.h \
+    $(INCDIR)/log_format.h \
+    $(INCDIR)/logger.h \
+    $(INCDIR)/protocol.h \
+    $(INCDIR)/util.h
 
-$(OBJDIR)/storage_server.o: $(SRCDIR)/storage_server.c $(INCDIR)/storage_server.h
+$(OBJDIR)/eviction_policy.o: $(SRCDIR)/eviction_policy.c \
+    $(INCDIR)/eviction_policy.h
 
-$(OBJDIR)/protocol.o: $(SRCDIR)/protocol.c $(INCDIR)/protocol.h
+$(OBJDIR)/config_parser.o: $(SRCDIR)/config_parser.c \
+    $(INCDIR)/config_parser.h \
+    $(INCDIR)/eviction_policy.h \
+    $(INCDIR)/protocol.h \
+    $(INCDIR)/util.h
 
-$(OBJDIR)/client_api.o: $(SRCDIR)/client_api.c $(INCDIR)/client_api.h $(INCDIR)/protocol.h
+$(OBJDIR)/util.o: $(SRCDIR)/util.c \
+    $(INCDIR)/util.h
 
-$(OBJDIR)/filesys_util.o: $(SRCDIR)/filesys_util.c $(INCDIR)/filesys_util.h
+$(OBJDIR)/client.o: $(SRCDIR)/client.c \
+    $(INCDIR)/client_api.h \
+    $(INCDIR)/cmdline_operation.h \
+    $(INCDIR)/cmdline_parser.h \
+    $(INCDIR)/filesys_util.h \
+    $(INCDIR)/list.h \
+    $(INCDIR)/protocol.h \
+    $(INCDIR)/util.h
+
+$(OBJDIR)/filesys_util.o: $(SRCDIR)/filesys_util.c \
+    $(INCDIR)/filesys_util.h
+
+$(OBJDIR)/cmdline_operation.o: $(SRCDIR)/cmdline_operation.c \
+    $(INCDIR)/cmdline_operation.h \
+    $(INCDIR)/list.h
+
+$(OBJDIR)/cmdline_parser.o: $(SRCDIR)/cmdline_parser.c \
+    $(INCDIR)/cmdline_parser.h \
+    $(INCDIR)/client_api.h \
+    $(INCDIR)/cmdline_operation.h \
+    $(INCDIR)/list.h \
+    $(INCDIR)/protocol.h \
+    $(INCDIR)/util.h
+
+$(OBJDIR)/list.o: $(SRCDIR)/list.c \
+    $(INCDIR)/list.h
+
+$(OBJDIR)/int_list.o: $(SRCDIR)/int_list.c \
+    $(INCDIR)/list.h \
+    $(INCDIR)/int_list.h
+
+$(OBJDIR)/hasht.o: $(SRCDIR)/hasht.c \
+    $(INCDIR)/hasht.h
+
+$(OBJDIR)/conc_hasht.o: $(SRCDIR)/conc_hasht.c \
+    $(INCDIR)/hasht.h \
+    $(INCDIR)/conc_hasht.h
+
+$(OBJDIR)/threadpool.o: $(SRCDIR)/threadpool.c \
+    $(INCDIR)/threadpool.h \
+    $(INCDIR)/util.h
+
+$(OBJDIR)/logger.o: $(SRCDIR)/logger.c \
+    $(INCDIR)/logger.h \
+    $(INCDIR)/util.h
+
+$(OBJDIR)/protocol.o: $(SRCDIR)/protocol.c \
+    $(INCDIR)/protocol.h
+
+$(OBJDIR)/client_api.o: $(SRCDIR)/client_api.c \
+    $(INCDIR)/client_api.h \
+    $(INCDIR)/filesys_util.h \
+    $(INCDIR)/protocol.h \
+    $(INCDIR)/util.h
 
 clean: 
 	@rm -f $(TARGETS)
 
 cleanall: clean
-	@rm -f $(OBJDIR)/*.o $(BINDIR)/*
+	@rm -f $(OBJDIR)/*.o $(LIBDIR)/*.so *~
