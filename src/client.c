@@ -1,7 +1,7 @@
 /**
  * @file                       client.c
  * @brief                      Implementazione del client. Effettua il parsing degli argomenti della linea di comando e
- *                             invoca le funzioni della api per interagire con il server.
+ *                             invoca le funzioni dell'API per interagire con il server.
  */
 
 #include <stdlib.h>
@@ -33,10 +33,10 @@
 
 /**
  * @def                        RETRY_IF_BUSY()
- * @brief                      Tenta al più MAX_REQ_TRIES volte la chiamata dell'api X nel caso in cui il server sia
+ * @brief                      Tenta al più MAX_REQ_TRIES volte la chiamata dell'API X nel caso in cui il server sia
  *                             occupato.
  * 
- * @param X                    La chiamata dell'api
+ * @param X                    La chiamata dell'API
  * @param ret                  Il valore ritornato da X
  */
 #define RETRY_IF_BUSY(X, ret) \
@@ -60,7 +60,7 @@
 
 /**
  * @function                   should_exit()
- * @brief                      Consente di stabilire in base al codice di errore err settato nella api se il processo deve
+ * @brief                      Consente di stabilire in base al codice di errore err settato nell'API se il processo deve
  *                             terminare o può proseguire l'esecuzione.
  * 
  * @param err                  Codice di errore
@@ -177,7 +177,7 @@ static int visit_dir(char* dirname, size_t limit, list_t* files) {
 
 /**
  * @function                   write_file_list()
- * @brief                      Effettua la richiesta di scrittura al server, invocando le funzioni dell'api, 
+ * @brief                      Effettua la richiesta di scrittura al server, invocando le funzioni dell'API, 
  *                             per ogni file della lista cmdline_operation->files.
  * 
  * @param cmdline_operation    L'operazione della linea di comando e i suoi argomenti
@@ -204,7 +204,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 			continue;
 		}
 
-		// invoco la funzione dell'api per aprire il file
+		// invoco la funzione dell'API per aprire il file
 		PRINT("\nopenFile(pathname = %s, flags = O_CREATE|O_LOCK)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, O_CREATE|O_LOCK), ret);
 		if (ret == -1) { 
@@ -215,7 +215,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 			else continue;
 		}
 
-		// invoco la funzione dell'api per scrivere il file 
+		// invoco la funzione dell'API per scrivere il file 
 		PRINT("\nwriteFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(writeFile(abspath, cmdline_operation->dirname_out), ret);
 		if (ret == -1 && errno != EFAULT) {
@@ -226,7 +226,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 			else continue;
 		}
 
-		// invoco la funzione dell'api per chiudere il file
+		// invoco la funzione dell'API per chiudere il file
 		PRINT("\ncloseFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(closeFile(abspath), ret);
 		if (ret == -1) {
@@ -361,7 +361,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 			continue;
 		}
 
-		// invoco la funzione dell'api per aprire il file
+		// invoco la funzione dell'API per aprire il file
 		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, 0), ret);
 		if (ret == -1 && errno != EALREADY) {
@@ -372,7 +372,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 			else continue;
 		}
 
-		// invoco la funzione dell'api per effettuare l'operazione di append
+		// invoco la funzione dell'API per effettuare l'operazione di append
 		PRINT("\nappendToFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(appendToFile(abspath, buf, size, cmdline_operation->dirname_out), ret);
 		if (ret == -1 && errno != EFAULT) { 
@@ -383,7 +383,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 			else continue;
 		}
 
-		// invoco la funzione dell'api per chiudere il file
+		// invoco la funzione dell'API per chiudere il file
 		PRINT("\ncloseFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(closeFile(abspath), ret);
 		if (ret == -1) {
@@ -439,7 +439,7 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 			continue;
 		}
 
-		// invoco la funzione dell'api per aprire il file
+		// invoco la funzione dell'API per aprire il file
 		int ret, errnosv;
 		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, 0), ret);
@@ -451,7 +451,7 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 			else continue;
 		}
 
-		// invoco la funzione dell'api per leggere il file
+		// invoco la funzione dell'API per leggere il file
 		void* buf = NULL;
 		size_t size = 0;
 		PRINT("\nreadFile(pathname = %s)", abspath);
@@ -510,7 +510,7 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		if (errno == ENOMEM)
 			return -1;
 
-		// invoco la funzione dell'api per chiudere il file
+		// invoco la funzione dell'API per chiudere il file
 		PRINT("\ncloseFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(closeFile(abspath), ret);
 		if (ret == -1) {
@@ -550,7 +550,7 @@ int read_n_files(cmdline_operation_t* cmdline_operation) {
 		}
 	}
 
-	// invoco la funzione dell'api per effettuare la readn
+	// invoco la funzione dell'API per effettuare la readn
 	int ret;
 	PRINT("\nreadNFiles(N = %d)", cmdline_operation->n);
 	RETRY_IF_BUSY(readNFiles(cmdline_operation->n, cmdline_operation->dirname_out), ret);
@@ -590,7 +590,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 			continue;
 		}
 
-		// invoco la funzione dell'api per aprire il file
+		// invoco la funzione dell'API per aprire il file
 		int ret, errnosv;
 		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, 0), ret);
@@ -602,7 +602,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 			else continue;
 		}
 
-		// invoco la funzione dell'api per acquisire la lock sul file
+		// invoco la funzione dell'API per acquisire la lock sul file
 		PRINT("\nlockFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(lockFile(abspath), ret);
 		if (ret == -1) { 
@@ -645,7 +645,7 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 			continue;
 		}
 
-		// invoco la funzione dell'api per rilasciare la lock sul file
+		// invoco la funzione dell'API per rilasciare la lock sul file
 		int ret, errnosv;
 		PRINT("\nunlockFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(unlockFile(abspath), ret);
@@ -689,11 +689,11 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 			continue;
 		}
 
-		// invoco la funzione dell'api per aprire il file
+		// invoco la funzione dell'API per aprire il file
 		int ret, errnosv;
 		PRINT("\nopenFile(pathname = %s, flags = O_LOCK)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, O_LOCK), ret);
-		// se il file è già aperto invoco la funzione dell'api per acquisire la lock sul file
+		// se il file è già aperto invoco la funzione dell'API per acquisire la lock sul file
 		if (ret == -1 && errno == EALREADY) {
 			PRINT("\nlockFile(pathname = %s)", abspath);
 			RETRY_IF_BUSY(lockFile(abspath), ret);
@@ -713,7 +713,7 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 			else continue;
 		}
 
-		// invoco la funzione dell'api per rimuovere il file
+		// invoco la funzione dell'API per rimuovere il file
 		PRINT("\nremoveFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(removeFile(abspath), ret);
 		if (ret == -1) { 
@@ -777,7 +777,7 @@ int main(int argc, char* argv[]) {
 		goto exit;
 	}
 	
-	// ottengo il tempo corrente e calcolo il tempo assoluto necessario per la funzione della api openConnection()
+	// ottengo il tempo corrente e calcolo il tempo assoluto necessario per la funzione dell'API openConnection()
 	time_t curr_time = time(NULL);
 	if (curr_time == -1) {
 		fprintf(stderr, "ERR: time (%s)\n", strerror(errno));
@@ -788,7 +788,7 @@ int main(int argc, char* argv[]) {
 	abstime.tv_nsec = 0;
 	abstime.tv_sec = curr_time + TRY_CONN_FOR_SEC;
 
-	// invoco la funzione della api per l'apertura della connessione con il server
+	// invoco la funzione dell'API per l'apertura della connessione con il server
 	r = openConnection(sockname, RETRY_CONN_AFTER_MSEC, abstime);
 	PRINT("openConnection(sockname = %s) : %s",
 		sockname, r == -1 ? errno_to_str(errno) : "OK");
@@ -837,7 +837,7 @@ int main(int argc, char* argv[]) {
 		errno = 0;
 	}
 	
-	// invoco la funzione della api per la chiusura della connessione con il server
+	// invoco la funzione dell'API per la chiusura della connessione con il server
 	r = closeConnection(sockname);
 	PRINT("\ncloseConnection(sockname = %s) : %s\n",
 		sockname, r == -1 ? errno_to_str(errno) : "OK");

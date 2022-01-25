@@ -1,6 +1,6 @@
 /**
- * @file    storage_server.c
- * @brief   Implementazione dello storage server.
+ * @file                     storage_server.c
+ * @brief                    Implementazione dello storage server.
  */
 
 #include <stdlib.h>
@@ -57,19 +57,19 @@ typedef struct storage {
 } storage_t;
 
 /**
- * @struct                  file_t
- * @brief                   Struttura che rappresenta un file nello storage.
+ * @struct                   file_t
+ * @brief                    Struttura che rappresenta un file nello storage.
  * 
- * @var path                Path del file
- * @var content             Contenuto del file
- * @var content_size        Dimensione del contenuto del file
- * @var locked_by_fd        File descriptor del client che è in possesso della lock sul file
- * @var can_write_fd        File descriptor del client che può effettuare l'operazione write, -1 se nessun client ha tale diritto
- * @var pending_lock_fds    Lista dei file descriptor dei client che sono in attesa di acquisire la lock sul file
- * @var open_by_fds         Lista dei file descriptor dei client che hanno aperto il file
- * @var creation_time       Timestamp della creazione del file
- * @var last_usage_time     Timestamp dell'ultimo utilizzo del file
- * @var usage_counter       Contatore degli utilizzi del file
+ * @var path                 Path del file
+ * @var content              Contenuto del file
+ * @var content_size         Dimensione del contenuto del file
+ * @var locked_by_fd         File descriptor del client che è in possesso della lock sul file
+ * @var can_write_fd         File descriptor del client che può effettuare l'operazione write, -1 se nessun client ha tale diritto
+ * @var pending_lock_fds     Lista dei file descriptor dei client che sono in attesa di acquisire la lock sul file
+ * @var open_by_fds          Lista dei file descriptor dei client che hanno aperto il file
+ * @var creation_time        Timestamp della creazione del file
+ * @var last_usage_time      Timestamp dell'ultimo utilizzo del file
+ * @var usage_counter        Contatore degli utilizzi del file
  */
 typedef struct file {
 	char* path;
@@ -85,14 +85,14 @@ typedef struct file {
 } file_t;
 
 /**
- * @struct                  evicted_file_t
- * @brief                   Struttura che rappresenta un file espulso dallo storage.
+ * @struct                   evicted_file_t
+ * @brief                    Struttura che rappresenta un file espulso dallo storage.
  *
- * @var path                Path del file
- * @var path_size           Lunghezza del path del file
- * @var content             Contenuto del file
- * @var content_size        Dimensione del contenuto del file
- * @var pending_lock_fds    Lista dei file descriptor dei client in attesa di acquisire la lock sul file espulso
+ * @var path                 Path del file
+ * @var path_size            Lunghezza del path del file
+ * @var content              Contenuto del file
+ * @var content_size         Dimensione del contenuto del file
+ * @var pending_lock_fds     Lista dei file descriptor dei client in attesa di acquisire la lock sul file espulso
  */
 typedef struct evicted_file {
 	char* path;
@@ -103,12 +103,12 @@ typedef struct evicted_file {
 } evicted_file_t;
 
 /**
- * @struct              client_t
- * @brief               Struttura che rappresenta un client.
+ * @struct                   client_t
+ * @brief                    Struttura che rappresenta un client.
  *
- * @var fd              Descrittore del client connesso al server
- * @var opened_files    Lista dei file aperti dal client
- * @var locked_files    Lista dei file bloccati dal client
+ * @var fd                   Descrittore del client connesso al server
+ * @var opened_files         Lista dei file aperti dal client
+ * @var locked_files         Lista dei file bloccati dal client
  */
 typedef struct client {
 	int fd;
@@ -117,14 +117,14 @@ typedef struct client {
 } client_t;
 
 /**
- * @def           WRITE_TO_CLIENT()
- * @brief         Scrive al file descriptor fd il buffer buf, memorizza il valore ritornato dalla write in r e stampa 
- *                eventualmente sullo stderr l'errore verificatosi.
+ * @def                      WRITE_TO_CLIENT()
+ * @brief                    Scrive al file descriptor fd il buffer buf, memorizza il valore ritornato dalla write in r e
+ *                           stampa eventualmente sullo stderr l'errore verificatosi.
  * 
- * @param fd      File descriptor del cliente
- * @param buf     Riferimento al buffer da scrivere
- * @param size    Dimensione del buffer buf
- * @param r       Valore ritornato dalla scrittura
+ * @param fd                 File descriptor del cliente
+ * @param buf                Riferimento al buffer da scrivere
+ * @param size               Dimensione del buffer buf
+ * @param r                  Valore ritornato dalla scrittura
  */
 #define WRITE_TO_CLIENT(fd, buf, size, r) \
 	do { \
@@ -134,14 +134,14 @@ typedef struct client {
 	} while(0);
 
 /**
- * @def            READ_FROM_CLIENT()
- * @brief          Legge dal file descriptor fd nel buffer buf, memorizza il valore ritornato dalla read in r e stampa 
- *                 eventualmente sullo stderr l'errore verificatosi.
+ * @def                      READ_FROM_CLIENT()
+ * @brief                    Legge dal file descriptor fd nel buffer buf, memorizza il valore ritornato dalla read in r e
+ *                           stampa eventualmente sullo stderr l'errore verificatosi.
  * 
- * @param fd       File descriptor del cliente
- * @param buf      Riferimento al buffer da leggere
- * @param size     Dimensione del buffer buf
- * @param r        Valore ritornato dalla scrittura
+ * @param fd                 File descriptor del cliente
+ * @param buf                Riferimento al buffer da leggere
+ * @param size               Dimensione del buffer buf
+ * @param r                  Valore ritornato dalla scrittura
  */
 #define READ_FROM_CLIENT(fd, buf, size, r) \
 	do { \
@@ -151,13 +151,13 @@ typedef struct client {
 	} while(0);
 
 /**
- * @function     send_response_code()
- * @brief        Invia al cliente associato al file descriptor fd il codice di risposta code
+ * @function                 send_response_code()
+ * @brief                    Invia al cliente associato al file descriptor fd il codice di risposta code.
  * 
- * @param fd     File descriptor del cliente
+ * @param fd                 File descriptor del cliente
  * 
- * @return       0 in caso di sucesso, -1 in caso di fallimento ed errno settato ad indicare l'errore
- * @note         Errno viene eventualmente settato da writen()
+ * @return                   0 in caso di sucesso, -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ * @note                     Errno viene eventualmente settato da writen()
  */
 static int send_response_code(int fd, response_code_t code) {
 	int r;
@@ -168,14 +168,14 @@ static int send_response_code(int fd, response_code_t code) {
 }
 
 /**
- * @function       send_size()
- * @brief          Invia al cliente associato al file descriptor fd size
+ * @function                 send_size()
+ * @brief                    Invia al cliente associato al file descriptor fd size.
  * 
- * @param fd       File descriptor del cliente
- * @param size     Valore da inviare
+ * @param fd                 File descriptor del cliente
+ * @param size               Valore da inviare
  * 
- * @return         0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
- * @note           Errno viene eventualmente settato da writen()
+ * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ * @note                     Errno viene eventualmente settato da writen().
  */
 static int send_size(int fd, size_t size) {
 	int r;
@@ -186,15 +186,15 @@ static int send_size(int fd, size_t size) {
 }
 
 /**
- * @function           send_file_name()
- * @brief              Invia al cliente associato al file descriptor fd la dimensione del path path_size e path
+ * @function                 send_file_name()
+ * @brief                    Invia al cliente associato al file descriptor fd la dimensione del path path_size e path
  * 
- * @param fd           File descriptor del cliente
- * @param path_size    Dimensione del path 
- * @param path         Path del file
+ * @param fd                 File descriptor del cliente
+ * @param path_size          Dimensione del path 
+ * @param path               Path del file
  * 
- * @return             0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
- * @note               Errno viene eventualmente settato da writen() o da send_size()
+ * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
+ * @note                     Errno viene eventualmente settato da writen() o da send_size()
  */
 static int send_file_name(int fd, size_t path_size, char* path) {
 	int r;
@@ -207,16 +207,16 @@ static int send_file_name(int fd, size_t path_size, char* path) {
 }
 
 /**
- * @function              send_file_content()
- * @brief                 Invia al cliente associato al file descriptor fd la dimensione del file file_size e il contenuto 
- *                        del file file_content
+ * @function                 send_file_content()
+ * @brief                    Invia al cliente associato al file descriptor fd la dimensione del file file_size e il contenuto 
+ *                           del file file_content.
  * 
- * @param fd              File descriptor del cliente
- * @param file_size       Dimensione del file
- * @param file_content    Contenuto del file
+ * @param fd                 File descriptor del cliente
+ * @param file_size          Dimensione del file
+ * @param file_content       Contenuto del file
  * 
- * @return                0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
- * @note                  Errno viene eventualmente settato da writen() o da send_size()
+ * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
+ * @note                     Errno viene eventualmente settato da writen() o da send_size()
  */
 static int send_file_content(int fd, size_t file_size, void* file_content) {
 	int r = 0;
@@ -231,16 +231,17 @@ static int send_file_content(int fd, size_t file_size, void* file_content) {
 }
 
 /**
- * @function      init_file()
- * @brief         Inizializza una struttura che rappresenta un file nello storage e ritorna un puntatore ad essa.
+ * @function                 init_file()
+ * @brief                    Inizializza una struttura che rappresenta un file nello storage e ritorna un puntatore ad essa.
  * 
- * @param path    Path del file
+ * @param path               Path del file
  * 
- * @return        Un puntatore alla struttura che rappresenta un file nello storage in caso di successo,
- *                NULL in caso di fallimento ed errno settato ad indicare l'errore.
- *                In caso di fallimento errno può assumere i seguenti valori:
- *                EINVAL se path è @c NULL o la sua lunghezza è 0
- * @note          Può fallire e settare errno se si verificano gli errori specificati da malloc() e int_list_create().
+ * @return                   Un puntatore alla struttura che rappresenta un file nello storage in caso di successo,
+ *                           NULL in caso di fallimento ed errno settato ad indicare l'errore.
+ *                           In caso di fallimento errno può assumere i seguenti valori:
+ *                           EINVAL se path è @c NULL o la sua lunghezza è 0
+ * @note                     Può fallire e settare errno se si verificano gli errori specificati da malloc() e
+ *                           int_list_create().
  */
 static file_t* init_file(char* path) {
 	if (path == NULL || strlen(path) == 0) {
@@ -277,10 +278,10 @@ static file_t* init_file(char* path) {
 }
 
 /**
- * @function      destroy_file()
- * @brief         Distrugge la struttura che rappresenta un file nello storage.
+ * @function                 destroy_file()
+ * @brief                    Distrugge la struttura che rappresenta un file nello storage.
  * 
- * @param file    Puntatore alla struttura che rappresenta il file da distruggere
+ * @param file               Puntatore alla struttura che rappresenta il file da distruggere
  */
 static void destroy_file(file_t* file) {
 	if (!file)
@@ -297,14 +298,14 @@ static void destroy_file(file_t* file) {
 }
 
 /**
- * @function    cmp_file()
- * @brief       Paragona due strutture che rappresentano file.
- *              Due file sono uguali se i loro path sono uguali.
+ * @function                 cmp_file()
+ * @brief                    Paragona due strutture che rappresentano file.
+ *                           Due file sono uguali se i loro path sono uguali.
  * 
- * @param a     Primo oggetto file da confrontare
- * @param b     Secondo oggetto file da confrontare
+ * @param a                  Primo oggetto file da confrontare
+ * @param b                  Secondo oggetto file da confrontare
  * 
- * @return      1 se i file sono uguali, 0 altrimenti.
+ * @return                   1 se i file sono uguali, 0 altrimenti.
  */
 static int cmp_file(void* a, void* b) {
 	if (!a && !b) 
@@ -317,16 +318,17 @@ static int cmp_file(void* a, void* b) {
 }
 
 /**
- * @function      init_evicted_file()
- * @brief         Inizializza una struttura che rappresenta un file espulso dallo storage e ritorna un puntatore ad essa.
+ * @function                 init_evicted_file()
+ * @brief                    Inizializza una struttura che rappresenta un file espulso dallo storage e ritorna un puntatore
+ *                           ad essa.
  *
- * @param file    Il file dello storage che è stato espulso
+ * @param file               Il file dello storage che è stato espulso
  *
- * @return        Un puntatore a una struttura che rappresenta un file espulso in caso di successo,
- *                NULL in caso di fallimento con errno settato ad indicare l'errore.
- *                In caso di fallimento errno può assumere i seguenti valori:
- *                EINVAL se file è @c NULL
- * @note          Errno viene settato se si verificano errori in malloc().
+ * @return                   Un puntatore a una struttura che rappresenta un file espulso in caso di successo,
+ *                           NULL in caso di fallimento con errno settato ad indicare l'errore.
+ *                           In caso di fallimento errno può assumere i seguenti valori:
+ *                           EINVAL se file è @c NULL
+ * @note                     Errno viene settato se si verificano errori in malloc().
  */
 static evicted_file_t* init_evicted_file(file_t* file) {
 	if (file == NULL) {
@@ -360,10 +362,10 @@ static evicted_file_t* init_evicted_file(file_t* file) {
 }
 
 /**
- * @function              destroy_evicted_file()
- * @brief                 Distrugge la struttura che rappresenta un file espulso dallo storage deallocando la memoria
+ * @function                 destroy_evicted_file()
+ * @brief                    Distrugge la struttura che rappresenta un file espulso dallo storage deallocando la memoria.
  *
- * @param evicted_file    Il puntatore alla struttura che rappresenta un file espulso
+ * @param evicted_file       Il puntatore alla struttura che rappresenta un file espulso
  */
 static void destroy_evicted_file(evicted_file_t* evicted_file) {
 	if (!evicted_file)
@@ -378,14 +380,14 @@ static void destroy_evicted_file(evicted_file_t* evicted_file) {
 }
 
 /**
- * @function   cmp_evicted_file()
- * @brief      Confronta due strutture che rappresentano file espulsi dallo storage.
- *             Essi sono uguali se il loro path è uguale.
+ * @function                 cmp_evicted_file()
+ * @brief                    Confronta due strutture che rappresentano file espulsi dallo storage.
+ *                           Essi sono uguali se il loro path è uguale.
  *
- * @param a    Primo oggetto da confrontare
- * @param b    Secondo oggetto da confrontare
+ * @param a                  Primo oggetto da confrontare
+ * @param b                  Secondo oggetto da confrontare
  *
- * @return     1 se gli oggetti sono uguali, 0 altrimenti.
+ * @return                   1 se gli oggetti sono uguali, 0 altrimenti.
  */
 static int cmp_evicted_file(void* a, void* b) {
 	if (!a && ! b)
@@ -398,16 +400,16 @@ static int cmp_evicted_file(void* a, void* b) {
 }
 
 /**
- * @function    init_client()
- * @brief       Inizializza una struttura che rappresenta un client e ritorna un puntatore ad essa.
+ * @function                 init_client()
+ * @brief                    Inizializza una struttura che rappresenta un client e ritorna un puntatore ad essa.
  * 
- * @param fd    Descrittore del client connesso al server
+ * @param fd                 Descrittore del client connesso al server
  * 
- * @return      Un puntatore a una struttura che rappresenta un client connesso al server in caso di successo,
- *              NULL in caso di fallimento ed errno settato ad indicare l'errore.
- *              In caso di fallimento errno può assumere i seguenti valori:
- *              EINVAL es fd è < 0
- * @note        Può fallire e settare errno se si verificano gli errori specificati da malloc() e list_create().
+ * @return                   Un puntatore a una struttura che rappresenta un client connesso al server in caso di successo,
+ *                           NULL in caso di fallimento ed errno settato ad indicare l'errore.
+ *                           In caso di fallimento errno può assumere i seguenti valori:
+ *                           EINVAL es fd è < 0
+ * @note                     Può fallire e settare errno se si verificano gli errori specificati da malloc() e list_create().
  */
 static client_t* init_client(int fd) {
 	if (fd < 0) {
@@ -435,11 +437,10 @@ static client_t* init_client(int fd) {
 }
 
 /**
- * @function        destroy_client()
- * @brief           Distrugge la struttura che rappresenta un client deallocando la memoria.
+ * @function                 destroy_client()
+ * @brief                    Distrugge la struttura che rappresenta un client deallocando la memoria.
  *
- * @param client    Il puntatore alla struttura che rappresenta il client da distruggere
- *
+ * @param client             Il puntatore alla struttura che rappresenta il client da distruggere
  */
 static void destroy_client(client_t* client) {
 	if (!client)
@@ -554,15 +555,15 @@ int new_connection_handler(storage_t* storage, int client_fd) {
 }
 
 /**
- * @function        update_file_usage_time()
- * @brief           Aggiorna il time stamp di ultimo utilizzo di file in base al tipo di operazione effettuata op e alla 
- *                  politica di espulsione policy
- * @warning         Questa funzione deve essere invocata dopo aver acquisito la lock sulla tabella hash di file per l'accesso
- *                  a file
+ * @function                 update_file_usage_time()
+ * @brief                    Aggiorna il time stamp di ultimo utilizzo di file in base al tipo di operazione effettuata op
+ *                           e alla politica di espulsione policy.
+ * @warning                  Questa funzione deve essere invocata dopo aver acquisito la lock sulla tabella hash di file
+ *                           per l'accesso a file.
  * 
- * @param file      Puntatore alla struttura file il cui contatore deve essere aggiornato
- * @param op        Operazione effettuata sul file
- * @param policy    Politica di espulsione
+ * @param file               Puntatore alla struttura file il cui contatore deve essere aggiornato
+ * @param op                 Operazione effettuata sul file
+ * @param policy             Politica di espulsione
  */
 static void update_file_usage_time(file_t* file, request_code_t op, eviction_policy_t policy) {
 	int r;
@@ -586,14 +587,14 @@ static void update_file_usage_time(file_t* file, request_code_t op, eviction_pol
 }
 
 /**
- * @function        update_file_usage_counter()
- * @brief           Aggiorna il contatore degli utilizzi di file in base al tipo di operazione effettuata op e alla politica 
- *                  di espulsione policy
- * @warning         Questa funzione deve essere invocata avendo accesso esclusivo al file
+ * @function                 update_file_usage_counter()
+ * @brief                    Aggiorna il contatore degli utilizzi di file in base al tipo di operazione effettuata op e 
+ *                           alla politica di espulsione policy.
+ * @warning                  Questa funzione deve essere invocata avendo accesso esclusivo al file
  * 
- * @param file      Oggetto file il cui contatore deve essere aggiornato
- * @param op        Operazione effettuata sul file
- * @param policy    Politica di espulsione
+ * @param file               Oggetto file il cui contatore deve essere aggiornato
+ * @param op                 Operazione effettuata sul file
+ * @param policy             Politica di espulsione
  */
 static void update_file_usage_counter(file_t* file, request_code_t op, eviction_policy_t policy) {
 	switch (op) {
@@ -638,18 +639,18 @@ static void update_file_usage_counter(file_t* file, request_code_t op, eviction_
 }
 
 /**
- * @function           give_lock_to_waiting_client()
- * @brief              Estrae il primo cliente in attesa di acquisire la lock su file e gli assegna la lock.
- *                     Se nessun client è in attesa di acquisire la lock setta il campo file->locked_by_fd a -1.
- * @warning            Questa funzione deve essere invocata dopo aver acquisito la lock sulla tabella hash di file per 
- *                     l'accesso a file.
+ * @function                 give_lock_to_waiting_client()
+ * @brief                    Estrae il primo cliente in attesa di acquisire la lock su file e gli assegna la lock.
+ *                           Se nessun client è in attesa di acquisire la lock setta il campo file->locked_by_fd a -1.
+ * @warning                  Questa funzione deve essere invocata dopo aver acquisito la lock sulla tabella hash di file per 
+ *                           l'accesso a file.
  * 
- * @param storage      Oggetto storage
- * @param file         File il cui detentore della lock deve essere modificato
- * @param worker_id    Identificativo del worker thread che gestisce la richiesta
+ * @param storage            Oggetto storage
+ * @param file               File il cui detentore della lock deve essere modificato
+ * @param worker_id          Identificativo del worker thread che gestisce la richiesta
  * 
- * @return             Il descrittore del client la cui connessione dovrà essere chiusa perchè disconnesso,
- *                     -1 se nessun client si è disconnesso.
+ * @return                   Il descrittore del client la cui connessione dovrà essere chiusa perchè disconnesso,
+ *                           -1 se nessun client si è disconnesso.
  */
 static int give_lock_to_waiting_client(storage_t* storage, file_t* file, int worker_id, int master_fd) {
 	int r, fd;
@@ -690,13 +691,13 @@ static int give_lock_to_waiting_client(storage_t* storage, file_t* file, int wor
 }
 
 /**
- * @function         delete_file_from_storage()
- * @brief            Elimina il file dallo storage e lo distrugge.
- * @warning          Questa funzione deve essere invocata dopo aver acquisito la lock sullo storage e sulla tabella hash di file
- *                   per l'accesso a file
+ * @function                 delete_file_from_storage()
+ * @brief                    Elimina il file dallo storage e lo distrugge.
+ * @warning                  Questa funzione deve essere invocata dopo aver acquisito la lock sullo storage e sulla tabella 
+ *                           hash di file per l'accesso a file.
  * 
- * @param storage    Oggetto storage
- * @param file       File da distruggere
+ * @param storage            Oggetto storage
+ * @param file               File da distruggere
  */
 static void delete_file_from_storage(storage_t* storage, file_t* file) {
 	int r, fd;
@@ -737,16 +738,16 @@ static void delete_file_from_storage(storage_t* storage, file_t* file) {
 }
 
 /**
- * @function           delete_client_from_storage()
- * @brief              Elimina il client dallo storage.
- * @warning            Questa funzione deve essere invocata senza avere alcuna lock acquisita.
+ * @function                 delete_client_from_storage()
+ * @brief                    Elimina il client dallo storage.
+ * @warning                  Questa funzione deve essere invocata senza avere alcuna lock acquisita.
  * 
- * @param storage      Oggetto storage
- * @param master_fd    Descrittore per la comunicazione con il master thread
- * @param client_fd    Descrittore del client di cui chiudere la connessione
- * @param worker_id    Identificativo del worker thread che gestisce la richiesta
+ * @param storage            Oggetto storage
+ * @param master_fd          Descrittore per la comunicazione con il master thread
+ * @param client_fd          Descrittore del client di cui chiudere la connessione
+ * @param worker_id          Identificativo del worker thread che gestisce la richiesta
  * 
- * @return             La lista dei descrittori dei client le cui connessioni devono essere chiuse perchè disconnessi.
+ * @return                   La lista dei descrittori dei client le cui connessioni devono essere chiuse perchè disconnessi.
  */
 static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd, int client_fd, int worker_id) {
 	int r;
@@ -807,14 +808,14 @@ static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd,
 }
 
 /**
- * @function           close_client_connection()
- * @brief              Chiude la connessione del cliente liberando le risorse associate.
- * @warning            Questa funzione deve essere invocata senza avere alcuna lock acquisita.
+ * @function                 close_client_connection()
+ * @brief                    Chiude la connessione del cliente liberando le risorse associate.
+ * @warning                  Questa funzione deve essere invocata senza avere alcuna lock acquisita.
  * 
- * @param storage      Oggetto storage
- * @param master_fd    Descrittore per la comunicazione con il master thread
- * @param client_fd    Descrittore del client di cui chiudere la connessione
- * @param worker_id    Identificativo del worker thread che gestisce la richiesta
+ * @param storage            Oggetto storage
+ * @param master_fd          Descrittore per la comunicazione con il master thread
+ * @param client_fd          Descrittore del client di cui chiudere la connessione
+ * @param worker_id          Identificativo del worker thread che gestisce la richiesta
  */
 void close_client_connection(storage_t* storage, int master_fd, int client_fd, int worker_id) {
 	int r, fd;
@@ -876,16 +877,16 @@ static void notify_clients_file_not_exists(storage_t* storage,
 }
 
 /**
- * @function             evict_file()
- * @brief                Espelle un file dallo storage.
- * @warning              Questa funzione deve essere invocata dopo aver acquisito la lock sullo storage.
+ * @function                 evict_file()
+ * @brief                    Espelle un file dallo storage.
+ * @warning                  Questa funzione deve essere invocata dopo aver acquisito la lock sullo storage.
  * 
- * @param storage        Oggetto storage
- * @param path_needed    Path del file che non deve essere espulso, 
- *                       NULL se tutti i file possono essere espulsi
+ * @param storage            Oggetto storage
+ * @param path_needed        Path del file che non deve essere espulso, 
+ *                           NULL se tutti i file possono essere espulsi
  * 
- * @return               Il file espulso in caso di successo,
- *                       NULL nel caso in cui non è stato possibile espellere alcun file.
+ * @return                   Il file espulso in caso di successo,
+ *                           NULL nel caso in cui non è stato possibile espellere alcun file.
  */
 static evicted_file_t* evict_file(storage_t* storage, char* path_needed) {
 	int r;

@@ -1,6 +1,6 @@
 /**
- * @file    hasht.c
- * @brief   Implementazione dell'interfaccia della tabella hash con liste di trabocco
+ * @file       hasht.c
+ * @brief      Implementazione dell'interfaccia della tabella hash con liste di trabocco
  */
 
 #include <stdlib.h>

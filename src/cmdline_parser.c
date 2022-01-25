@@ -1,6 +1,6 @@
 /**
- * @file     cmdline_parser.c
- * @brief    Implementazione del parsing degli argomenti della linea di comando del client.
+ * @file            cmdline_parser.c
+ * @brief           Implementazione del parsing degli argomenti della linea di comando del client.
  */
 
 #include <stdlib.h>
@@ -36,10 +36,10 @@
 	fprintf(stderr, "ERR: l'opzione -%c può essere specificata una sola volta\n", option);
 
 /**
- * @def          PRINT_NOT_A_NUMBER()
- * @brief        Stampa sullo stderr che l'argomento arg di un'opzione non è un numero valido
+ * @def             PRINT_NOT_A_NUMBER()
+ * @brief           Stampa sullo stderr che l'argomento arg di un'opzione non è un numero valido
  * 
- * @param arg    L'argomento di un'opzione che non è un numero valido
+ * @param arg       L'argomento di un'opzione che non è un numero valido
  */
 #define PRINT_NOT_A_NUMBER(arg) \
 	fprintf(stderr, "ERR: '%s' non è un numero valido\n", arg);
@@ -55,10 +55,10 @@
 	fprintf(stderr, "ERR: l'argomento '%s' dell'opzione -%c non è valido\n", arg, option);
 
 /**
- * @function usage()
- * @brief         Stampa del messaggio di help del client
+ * @function        usage()
+ * @brief           Stampa del messaggio di help del client
  * 
- * @param prog    Il nome del programma
+ * @param prog      Il nome del programma
  */
 static void usage(char* prog) {
 	printf("usage: %s <options>\n", prog);

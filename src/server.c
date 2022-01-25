@@ -1,6 +1,6 @@
 /**
- * @file     server.c
- * @brief    Implementazione del server.
+ * @file                 server.c
+ * @brief                Implementazione del server.
  */
 
 #include <stdlib.h>
@@ -30,12 +30,12 @@
 #endif
 
 /**
- * @struct           task_args_t
- * @brief            Struttura che raccoglie gli argomenti di un task che un worker dovrà servire
+ * @struct               task_args_t
+ * @brief                Struttura che raccoglie gli argomenti di un task che un worker dovrà servire
  * 
- * @var storage      Struttura storage
- * @var master_fd    Descrittore per la comunicazione con il master
- * @var client_fd    Descrittore del client che ha effettuato la richiesta
+ * @var storage          Struttura storage
+ * @var master_fd        Descrittore per la comunicazione con il master
+ * @var client_fd        Descrittore del client che ha effettuato la richiesta
  */
 typedef struct task_args {
 	storage_t* storage;
@@ -44,11 +44,11 @@ typedef struct task_args {
 } task_args_t;
 
 /**
- * @function           task_handler()
- * @brief              Funzione eseguita dai worker thread per servire le richieste dei clienti
+ * @function             task_handler()
+ * @brief                Funzione eseguita dai worker thread per servire le richieste dei clienti
  * 
- * @param arg          Argomenti del task
- * @param worker_id    Identificativo del worker thread che gestisce la richiesta
+ * @param arg            Argomenti del task
+ * @param worker_id      Identificativo del worker thread che gestisce la richiesta
  */
 static void task_handler(void *arg, int worker_id) {
 	task_args_t* task_arg = (task_args_t*)arg;
@@ -73,80 +73,80 @@ static void task_handler(void *arg, int worker_id) {
 		case OPEN_LOCK:
 		case OPEN_CREATE_LOCK:
 			EQM1_DO(open_file_handler(
-						storage, 
-						master_fd, 
-						client_fd, 
-						worker_id, 
-						req->file_path, 
-						req->code),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->file_path,
+				req->code),
+			r, EXTF);
 			break;
 		case WRITE:
 		case APPEND:
 			EQM1_DO(write_file_handler(
-						storage, 
-						master_fd, 
-						client_fd, 
-						worker_id, 
-						req->file_path, 
-						req->content, 
-						req->content_size, 
-						req->code),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->file_path,
+				req->content,
+				req->content_size,
+				req->code),
+			r, EXTF);
 			break;
 		case READ:
 			EQM1_DO(read_file_handler(
-						storage,
-						master_fd,
-						client_fd,
-						worker_id, 
-						req->file_path),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->file_path),
+			r, EXTF);
 			break;
 		case READN:
 			EQM1_DO(readn_file_handler(
-						storage,
-						master_fd,
-						client_fd,
-						worker_id,
-						req->n),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->n),
+			r, EXTF);
 			break;
 		case LOCK:
 			EQM1_DO(lock_file_handler(
-						storage,
-						master_fd,
-						client_fd,
-						worker_id,
-						req->file_path),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->file_path),
+			r, EXTF);
 			break;
 		case UNLOCK:
 			EQM1_DO(unlock_file_handler(
-						storage,
-						master_fd,
-						client_fd,
-						worker_id,
-						req->file_path),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->file_path),
+			r, EXTF);
 			break;
 		case REMOVE:
 			EQM1_DO(remove_file_handler(
-						storage,
-						master_fd,
-						client_fd,
-						worker_id,
-						req->file_path),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->file_path),
+			r, EXTF);
 			break;
 		case CLOSE:
 			EQM1_DO(close_file_handler(
-						storage,
-						master_fd,
-						client_fd,
-						worker_id,
-						req->file_path),
-					r, EXTF);
+				storage,
+				master_fd,
+				client_fd,
+				worker_id,
+				req->file_path),
+			r, EXTF);
 			break;
 		default: ;
 	}
@@ -155,14 +155,14 @@ static void task_handler(void *arg, int worker_id) {
 }
 
 /**
- * @struct              sighandler_args_t
- * @brief               Struttura contenente le informazioni da passare al signal handler thread
+ * @struct               sighandler_args_t
+ * @brief                Struttura contenente le informazioni da passare al signal handler thread
  *
- * @var set             Insieme dei segnali da gestire
- * @var signal_fd       Descrittore per la comunicazione dei segnali al main thread
- * @var shut_down       Flag da settare a seguito di ricezione di SIGHUP
- * @var shut_down_now   Flag da settare a seguito di ricezione di SIGINT o SIGQUIT
- * @var sig_mutex       Mutex per l'accesso in mutua esclusione ai flag
+ * @var set              Insieme dei segnali da gestire
+ * @var signal_fd        Descrittore per la comunicazione dei segnali al main thread
+ * @var shut_down        Flag da settare a seguito di ricezione di SIGHUP
+ * @var shut_down_now    Flag da settare a seguito di ricezione di SIGINT o SIGQUIT
+ * @var sig_mutex        Mutex per l'accesso in mutua esclusione ai flag
  */
 typedef struct sighandler_args {
 	sigset_t *set;
@@ -173,10 +173,10 @@ typedef struct sighandler_args {
 } sighandler_args_t;
 
 /**
- * @function     sig_handler()
- * @breif        Funzione eseguita dal signal handler thread
+ * @function             sig_handler()
+ * @breif                Funzione eseguita dal signal handler thread
  * 
- * @param arg    Argomenti della funzione
+ * @param arg            Argomenti della funzione
  */
 static void *sig_handler(void *arg) {
 	int r;
@@ -217,13 +217,13 @@ static void *sig_handler(void *arg) {
 }
 
 /**
- * @function      is_flag_setted()
- * @brief         Permette di stabilire se flag è settato a true accedendovi in mutua esclusione con mutex
+ * @function             is_flag_setted()
+ * @brief                Permette di stabilire se flag è settato a true accedendovi in mutua esclusione con mutex
  * 
- * @param mutex   Mutex per l'accesso in mutua esclusione a flag
- * @param flag    Il flag da controllare
+ * @param mutex          Mutex per l'accesso in mutua esclusione a flag
+ * @param flag           Il flag da controllare
  * 
- * @return        true se flag è true, false altrimenti
+ * @return               true se flag è true, false altrimenti
  */
 static inline bool is_flag_setted(pthread_mutex_t mutex, bool flag) {
 	int r;
@@ -235,11 +235,11 @@ static inline bool is_flag_setted(pthread_mutex_t mutex, bool flag) {
 }
 
 /**
- * @function      set_flag()
- * @brief         Setta a true flag accedendovi in mutua esclusione
+ * @function             set_flag()
+ * @brief                Setta a true flag accedendovi in mutua esclusione
  * 
- * @param mutex   Mutex per l'accesso in mutua esclusione a flag
- * @param flag    Il flag da settare
+ * @param mutex          Mutex per l'accesso in mutua esclusione a flag
+ * @param flag           Il flag da settare
  */
 static inline void set_flag(pthread_mutex_t mutex, bool* flag) {
 	int r;
@@ -249,13 +249,13 @@ static inline void set_flag(pthread_mutex_t mutex, bool* flag) {
 }
 
 /**
- * @function      get_max_fd()
- * @brief         Ritorna il descrittore di indice massimo tra i descrittori attivi
+ * @function             get_max_fd()
+ * @brief                Ritorna il descrittore di indice massimo tra i descrittori attivi
  * 
- * @param set     Set dei descrittori attivi
- * @param fdmax   Indice del massimo descrittore attuale
+ * @param set            Set dei descrittori attivi
+ * @param fdmax          Indice del massimo descrittore attuale
  * 
- * @return        Indice del massimo descrittore attivo
+ * @return               Indice del massimo descrittore attivo
  */
 static int get_max_fd(fd_set set, int fdmax) {
 	for (int i = (fdmax-1); i >= 0; -- i) {
@@ -266,10 +266,10 @@ static int get_max_fd(fd_set set, int fdmax) {
 }
 
 /**
- * @function      usage()
- * @brief         stampa il messaggio di usage.
+ * @function             usage()
+ * @brief                stampa il messaggio di usage.
  * 
- * @param prog    Il nome del programma
+ * @param prog           Il nome del programma
  */
 static void usage(char* prog) {
 	printf("usage: prog [-h] [-c config_file_path]\n\n"

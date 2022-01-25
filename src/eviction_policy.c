@@ -1,6 +1,6 @@
 /**
- * @file    eviction_policy.c
- * @brief   Implementazione della funzione relativa alle politiche di espulsione
+ * @file     eviction_policy.c
+ * @brief    Implementazione della funzione relativa alle politiche di espulsione
  */
 
 #include <stddef.h>

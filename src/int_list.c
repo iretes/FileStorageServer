@@ -1,6 +1,6 @@
 /**
- * @file    int_list.c
- * @brief   Implementazione dell'interfaccia della linked list di interi
+ * @file       int_list.c
+ * @brief      Implementazione dell'interfaccia della linked list di interi
  */
 
 #include <stdlib.h>
@@ -11,13 +11,13 @@
 #include <int_list.h>
 
 /**
- * @function  int_list_compare_elem()
- * @brief     Confronta due interi (elementi della lista)
+ * @function   int_list_compare_elem()
+ * @brief      Confronta due interi (elementi della lista)
  * 
- * @param a   primo elemento da confrontare
- * @param b   secondo elemento da confrontare
+ * @param a    primo elemento da confrontare
+ * @param b    secondo elemento da confrontare
  *
- * @return    1 se gli interi sono uguali, 0 altrimenti
+ * @return     1 se gli interi sono uguali, 0 altrimenti
  */
 static int int_list_compare_elem(void* a, void* b) {
 	return ((*(int*)a - *(int*)b) == 0);

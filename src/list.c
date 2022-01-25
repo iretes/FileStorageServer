@@ -1,6 +1,6 @@
 /**
- * @file    list.c
- * @brief   File di implementazione dell'interfaccia della linked list
+ * @file     list.c
+ * @brief    File di implementazione dell'interfaccia della linked list
  */
 
 #include <stdlib.h>

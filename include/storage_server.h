@@ -61,7 +61,8 @@ typedef struct request {
  *                        Nel caso di fallimento di pthread_mutex_init() errno viene settato con i valori che tale funzione
  *                        ritorna.
  */
-storage_t* storage_create(config_t* config, logger_t* logger);
+storage_t* storage_create(config_t* config,
+				logger_t* logger);
 
 /**
  * @function              storage_destroy()
@@ -83,7 +84,8 @@ void storage_destroy(storage_t* storage);
  *                        EINVAL se storage è @c NULL o client_fd è negativo
  *                        EALREADY se client_fd è il descrittore di un cliente già connesso
  */
-int new_connection_handler(storage_t* storage, int client_fd);
+int new_connection_handler(storage_t* storage,
+				int client_fd);
 
 /**
  * @function              read_request()
@@ -101,7 +103,10 @@ int new_connection_handler(storage_t* storage, int client_fd);
  *                        ECOMM se la richiesta ricevuta dal cliente non rispetta il protocollo o è stato riscontrato 
  *                        che il cliente si è disconesso
  */
-request_t* read_request(storage_t* storage, int master_fd, int client_fd, int worker_id);
+request_t* read_request(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id);
 
 /**
  * @function              rejected_task_handler()
@@ -113,9 +118,9 @@ request_t* read_request(storage_t* storage, int master_fd, int client_fd, int wo
  * 
  * @return                1 se il client si è disconnesso, 0 altrimenti.
  */
-int rejected_task_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd);
+int rejected_task_handler(storage_t* storage,
+				int master_fd,
+				int client_fd);
 
 /**
  * @function              open_file_handler()
@@ -134,12 +139,12 @@ int rejected_task_handler(storage_t* storage,
  *                        @c NULL o la sua lunghezza è 0 o mode è diversa da OPEN_NO_FLAGS, OPEN_CREATE, OPEN_LOCK e 
  *                        OPEN_CREATE_LOCK.
  */
-int open_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						char* file_path, 
-						request_code_t mode);
+int open_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				char* file_path,
+				request_code_t mode);
 
 /**
  * @function              write_file_handler()
@@ -159,14 +164,14 @@ int open_file_handler(storage_t* storage,
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
  *                        @c NULL o la sua lunghezza è 0 o mode è diversa da WRITE e APPEND.
  */
-int write_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						char* file_path, 
-						void* content, 
-						size_t content_size, 
-						request_code_t mode);
+int write_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				char* file_path,
+				void* content,
+				size_t content_size,
+				request_code_t mode);
 
 /**
  * @function              read_file_handler()
@@ -183,11 +188,11 @@ int write_file_handler(storage_t* storage,
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
  *                        @c NULL o la sua lunghezza è 0.
  */
-int read_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						char* file_path);
+int read_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				char* file_path);
 
 /**
  * @function              readn_file_handler()
@@ -204,11 +209,11 @@ int read_file_handler(storage_t* storage,
  * 
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi.
  */
-int readn_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						int n);
+int readn_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				int n);
 
 /**
  * @function              lock_file_handler()
@@ -225,11 +230,11 @@ int readn_file_handler(storage_t* storage,
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
  *                        @c NULL o la sua lunghezza è 0.
  */
-int lock_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						char* file_path);
+int lock_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				char* file_path);
 
 /**
  * @function              unlock_file_handler()
@@ -246,11 +251,11 @@ int lock_file_handler(storage_t* storage,
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
  *                        @c NULL o la sua lunghezza è 0.
  */
-int unlock_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						char* file_path);
+int unlock_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				char* file_path);
 
 /**
  * @function              remove_file_handler()
@@ -267,11 +272,11 @@ int unlock_file_handler(storage_t* storage,
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
  *                        @c NULL o la sua lunghezza è 0.
  */
-int remove_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						char* file_path);
+int remove_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				char* file_path);
 
 /**
  * @function              close_file_handler()
@@ -288,11 +293,11 @@ int remove_file_handler(storage_t* storage,
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
  *                        @c NULL o la sua lunghezza è 0.
  */
-int close_file_handler(storage_t* storage, 
-						int master_fd, 
-						int client_fd, 
-						int worker_id, 
-						char* file_path);
+int close_file_handler(storage_t* storage,
+				int master_fd,
+				int client_fd,
+				int worker_id,
+				char* file_path);
 
 /**
  * @function              print_statistics()

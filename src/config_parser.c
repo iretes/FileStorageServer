@@ -1,6 +1,6 @@
 /**
- * @file    config_parser.c
- * @brief   Implementazione del parsing del file di configurazione
+ * @file     config_parser.c
+ * @brief    Implementazione del parsing del file di configurazione
  */
  
 #include <stdlib.h>

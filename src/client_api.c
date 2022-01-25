@@ -220,15 +220,15 @@ static int send_N(int N) {
 }
 
 /**
- * @function                receive_respcode()
- * @brief                   Riceve dal server il codice di risposta.
+ * @function               receive_respcode()
+ * @brief                  Riceve dal server il codice di risposta.
  * 
- * @param code              Codice di risposta ricevuto
+ * @param code             Codice di risposta ricevuto
  * 
- * @return                  0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
- *                          In caso di fallimento errno può assumere i seguenti valori:
- *                          ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
- *                          ECONNRESET   se il server ha chiuso la connessione
+ * @return                 0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
+ *                         In caso di fallimento errno può assumere i seguenti valori:
+ *                         ECOMM        se si è verificato un errore lato client durante la scrittura sulla socket
+ *                         ECONNRESET   se il server ha chiuso la connessione
  */
 static int receive_respcode(response_code_t* code) {
 	int r;

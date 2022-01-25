@@ -1,6 +1,6 @@
 /**
- * @file    filesys_util.c
- * @brief   Implementazione delle routine di utilità per l'interazione con il file system
+ * @file               filesys_util.c
+ * @brief              Implementazione delle routine di utilità per l'interazione con il file system
  */
 
 #include <stdlib.h>
@@ -80,15 +80,15 @@ char* get_absolute_path(const char* file_name) {
 }
 
 /**
- * @function   get_num_digits()
- * @brief      Ritorna il numero di cifre di un intero
+ * @function           get_num_digits()
+ * @brief              Ritorna il numero di cifre di un intero
  * 
- * @param n    L'intero di cui si vuole conoscere il numero di cifre
+ * @param n            L'intero di cui si vuole conoscere il numero di cifre
  * 
- * @return     Il numero di cifre di n in caso di successo, 
- *             -1 in caso di fallimento ed errno settato ad indicare l'errore.
- *             In caso di fallimento errno può assumere i seguenti valori:
- *             EINVAL se n < 0
+ * @return             Il numero di cifre di n in caso di successo, 
+ *                     -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ *                     In caso di fallimento errno può assumere i seguenti valori:
+ *                     EINVAL se n < 0
  */
 static int get_decimal_num_digits(int n) {
 	if (n < 0) {

@@ -1,6 +1,6 @@
 /**
- * @file     threadpool.c
- * @brief    File di implementazione dell'interfaccia del threadpool
+ * @file        threadpool.c
+ * @brief       File di implementazione dell'interfaccia del threadpool.
  */
 
 #include <stdlib.h>
