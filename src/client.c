@@ -67,7 +67,7 @@
  * @return                     True se il processo deve terminare l'esecuzione, false atrimenti.
  */
 static inline bool should_exit(int err) {
-	if (errno == ECONNRESET || errno == ECOMM || errno == EBUSY)
+	if (errno == ECONNRESET || errno == ECOMM || errno == EBUSY || errno == EBADRQC)
 		return true;
 	return false;
 }
@@ -210,8 +210,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -221,8 +220,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1 && errno != EFAULT) {
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -232,8 +230,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) {
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 		free(abspath);
@@ -367,8 +364,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1 && errno != EALREADY) {
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -378,8 +374,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1 && errno != EFAULT) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -389,8 +384,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) {
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 		free(abspath);
@@ -446,8 +440,7 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1 && errno != EALREADY) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -459,8 +452,7 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -516,8 +508,7 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) {
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 		free(abspath);
@@ -597,8 +588,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1 && errno != EALREADY) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -608,8 +598,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 		free(abspath);
@@ -652,8 +641,7 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 		free(abspath);
@@ -700,16 +688,14 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 			if (ret == -1) { 
 				errnosv = errno;
 				free(abspath);
-				if (errnosv == EBADRQC) return 1;
-				else if (should_exit(errnosv)) return -1;
+				if (should_exit(errnosv)) return -1;
 				else continue;
 			}
 		}
 		else if (ret == -1) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 
@@ -719,8 +705,7 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 		if (ret == -1) { 
 			errnosv = errno;
 			free(abspath);
-			if (errnosv == EBADRQC) return 1;
-			else if (should_exit(errnosv)) return -1;
+			if (should_exit(errnosv)) return -1;
 			else continue;
 		}
 		free(abspath);
