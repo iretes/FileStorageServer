@@ -1,6 +1,7 @@
 /**
 * @file     cmdline_operation.c
-* @brief    Implementazione dell'oggetto che rappresenta un'operazione specificata della linea di comando del client.
+* @brief    Implementazione delle funzioni sulla struttura che rappresenta un'opzione specificata della linea di comando 
+            del client.
 */
 
 #include <stdlib.h>

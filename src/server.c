@@ -45,7 +45,7 @@ typedef struct task_args {
 
 /**
  * @function             task_handler()
- * @brief                Funzione eseguita dai worker thread per servire le richieste dei clienti.
+ * @brief                Funzione eseguita dai worker thread per servire le richieste dei client.
  * 
  * @param arg            Argomenti del task
  * @param worker_id      Identificativo del worker thread che gestisce la richiesta
@@ -57,7 +57,7 @@ static void task_handler(void *arg, int worker_id) {
 	int master_fd = task_arg->master_fd;
 	int client_fd = task_arg->client_fd;
 
-	// leggo la richiesta del cliente
+	// leggo la richiesta del client
 	request_t* req = read_request(storage, master_fd, client_fd, worker_id);
 	if (req == NULL) {
 		free(arg);
@@ -300,11 +300,11 @@ static void usage(char* prog) {
 	printf("# (n intero, 0 < n <= %zu, se non specificato = %u)\n", 
 	SIZE_MAX, DEFAULT_MAX_LOCKS);
 	printf("%s=n;\n\n", MAX_LOCKS_STR);
-	printf("# Numero atteso di clienti contemporaneamente connessi\n");
+	printf("# Numero atteso di client contemporaneamente connessi\n");
 	printf("# (n intero, 0 < n <= %zu, se non specificato = %u)\n", 
 	SIZE_MAX, DEFAULT_EXPECTED_CLIENTS);
 	printf("%s=n;\n\n", EXPECTED_CLIENTS_STR);
-	printf("# Path della socket per la connessione con i clienti\n");
+	printf("# Path della socket per la connessione con i client\n");
 	printf("# (se non specificato = %s)\n", DEFAULT_SOCKET_PATH);
 	printf("%s=path;\n\n", SOCKET_PATH_STR);
 	printf("# Path del file di log\n");
@@ -420,13 +420,13 @@ int main(int argc, char *argv[]) {
 	EQM1_DO(socket(AF_UNIX, SOCK_STREAM, 0), listenfd, EXTF);
 	struct sockaddr_un serv_addr;
 	memset(&serv_addr, '0', sizeof(serv_addr));
-	serv_addr.sun_family = AF_UNIX;    
+	serv_addr.sun_family = AF_UNIX;
 	strncpy(serv_addr.sun_path, config->socket_path, strlen(config->socket_path) + 1);
 	unlink(config->socket_path); // rimuovo il socket se già esistente
 	EQM1_DO(bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)), r, extval = EXIT_FAILURE; goto server_exit);
 	EQM1_DO(listen(listenfd, MAXBACKLOG), r, EXTF);
 
-	// creo l'oggetto logger
+	// creo il logger
 	logger_t* logger = logger_create(config->log_file_path, INIT_LINE);
 	if (!logger) {
 		extval = EXIT_FAILURE;
@@ -441,7 +441,7 @@ int main(int argc, char *argv[]) {
 	int workers_pipe[2];
 	EQM1_DO(pipe(workers_pipe), r, EXTF);
 
-	// creo l'oggetto storage
+	// creo lo storage
 	storage_t* storage = NULL;
 	EQNULL_DO(storage_create(config, logger), storage, EXTF);
 
@@ -455,7 +455,7 @@ int main(int argc, char *argv[]) {
 	int fdmax = (listenfd > signal_pipe[0]) ? listenfd : signal_pipe[0];
 	fdmax = (workers_pipe[0] > fdmax) ? workers_pipe[0] : fdmax;
 
-	// numero di clienti connessi
+	// numero di client connessi
 	int connected_clients = 0;
 
 	// main loop
@@ -523,7 +523,7 @@ int main(int argc, char *argv[]) {
 				if (signal_pipe[0] == fdmax)
 					fdmax = get_max_fd(set, fdmax);
 
-				// se non ci sono più clienti connessi posso terminare
+				// se non ci sono più client connessi posso terminare
 				if (connected_clients == 0) {
 					set_flag(sig_mutex, &shut_down_now);
 					break;
@@ -535,19 +535,19 @@ int main(int argc, char *argv[]) {
 				// leggo il descrittore scritto dal worker nella pipe
 				EQM1_DO(readn(workers_pipe[0], &client_fd, sizeof(int)), r, EXTF);
 
-				// se negativo significa che il cliente associato al descrittore -(client_fd) si è disconnesso
+				// se negativo significa che il client associato al descrittore -(client_fd) si è disconnesso
 				if (client_fd < 0) {
 					connected_clients --;
 					EQM1(close((-client_fd)), r);
 					LOG(log_record(logger, "%d,%s,,%d,,,,,%d",
 						MASTER_ID, CLOSED_CONNECTION, (-client_fd), connected_clients));
-					// se è stato ricevuto il segnale SIGHUP e non ci sono più clienti connessi posso terminare
+					// se è stato ricevuto il segnale SIGHUP e non ci sono più client connessi posso terminare
 					if (is_flag_setted(sig_mutex, shut_down) && connected_clients == 0) {
 						set_flag(sig_mutex, &shut_down_now);
 						break;
 					}
 				}
-				// altrimenti il cliente associato al descrittore client_fd è stato servito
+				// altrimenti il client associato al descrittore client_fd è stato servito
 				else {
 					FD_SET(client_fd, &set);
 					if (client_fd > fdmax)
@@ -555,8 +555,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			else {
-				// è stata ricevuta una richiesta da un cliente già connesso
-
+				// è stata ricevuta una richiesta da un client già connesso
 				if (is_flag_setted(sig_mutex, shut_down_now)) {
 					LOG(log_record(logger, "%d,%s", 
 						MASTER_ID, SHUT_DOWN_NOW));

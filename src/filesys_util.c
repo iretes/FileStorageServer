@@ -133,7 +133,7 @@ char* build_notexisting_path(const char* dir_name, const char* file_name) {
 		}
 		return file_path;
 	}
-	// se l'errore è != EEXIST esco settando errno
+	// se l'errore è != EEXIST esco
 	else if (errno != EEXIST) {
 		free(file_path);
 		return NULL;

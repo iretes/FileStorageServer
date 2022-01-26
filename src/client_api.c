@@ -291,8 +291,8 @@ static int receive_pathname(char** pathname, size_t* size) {
 	if (receive_size(size) == -1)
 		return -1;
 	
-	// secondo il protocollo il server non invia 0
 	if (*size == 0) {
+		// secondo il protocollo il server non invia 0
 		errno = EPROTO;
 		return -1;
 	}
@@ -307,14 +307,14 @@ static int receive_pathname(char** pathname, size_t* size) {
 	// leggo il path del file
 	r = readn(g_socket_fd, *pathname, (*size)*sizeof(char));
 	if (r == 0) {
-		errno = ECONNRESET;
 		free(*pathname);
+		errno = ECONNRESET;
 		return -1;
 	}
 	else if (r == -1) {
+		free(*pathname);
 		if (errno != ECONNRESET)
 			errno = ECOMM;
-		free(*pathname);
 		return -1;
 	}
 	return 0;
@@ -352,14 +352,14 @@ static int receive_file_content(void** buf, size_t* size) {
 	// leggo il contenuto del file
 	r = readn(g_socket_fd, *buf, *size);
 	if (r == 0) {
-		errno = ECONNRESET;
 		free(*buf);
+		errno = ECONNRESET;
 		return -1;
 	}
 	else if (r == -1) {
+		free(*buf);
 		if (errno != ECONNRESET)
 			errno = ECOMM;
-		free(*buf);
 		return -1;
 	}
 	return 0;
@@ -417,9 +417,9 @@ static int receive_files(const char* dirname, int* num_file_received) {
 		// ottengo il nome del file
 		char* filename = get_basename(pathname_in);
 		if (!filename) {
-			errno = ECOMM;
 			free(buf_in);
 			free(pathname_in);
+			errno = ECOMM;
 			return -1;
 		}
 

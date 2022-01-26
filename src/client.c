@@ -191,7 +191,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
-	int ret, errnosv;
+	int ret;
 	char* filepath;
 	// itero sui file che devono essere scritti
 	list_for_each(cmdline_operation->files, filepath) {
@@ -208,9 +208,8 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\nopenFile(pathname = %s, flags = O_CREATE|O_LOCK)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, O_CREATE|O_LOCK), ret);
 		if (ret == -1) { 
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 
@@ -218,9 +217,8 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\nwriteFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(writeFile(abspath, cmdline_operation->dirname_out), ret);
 		if (ret == -1 && errno != EFAULT) {
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 
@@ -228,9 +226,8 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\ncloseFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(closeFile(abspath), ret);
 		if (ret == -1) {
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 		free(abspath);
@@ -345,7 +342,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		return 1;
 	}
 
-	int ret, errnosv;
+	int ret;
 	char* filepath;
 	// itero sui file che devono essere scritti in append
 	list_for_each(cmdline_operation->files, filepath) {
@@ -362,9 +359,8 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, 0), ret);
 		if (ret == -1 && errno != EALREADY) {
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 
@@ -382,9 +378,8 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\ncloseFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(closeFile(abspath), ret);
 		if (ret == -1) {
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 		free(abspath);
@@ -409,8 +404,6 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
-
-	int errnosv;
 
 	if (cmdline_operation->dirname_out) {
 		// creo, se non esiste, la directory in cui memorizzare i file letti dal server
@@ -441,9 +434,8 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, 0), ret);
 		if (ret == -1 && errno != EALREADY) { 
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 
@@ -506,9 +498,8 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\ncloseFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(closeFile(abspath), ret);
 		if (ret == -1) {
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 		free(abspath);
@@ -582,13 +573,12 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 		}
 
 		// invoco la funzione dell'API per aprire il file
-		int ret, errnosv;
+		int ret;
 		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, 0), ret);
 		if (ret == -1 && errno != EALREADY) { 
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 
@@ -596,9 +586,8 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\nlockFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(lockFile(abspath), ret);
 		if (ret == -1) { 
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 		free(abspath);
@@ -635,13 +624,12 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 		}
 
 		// invoco la funzione dell'API per rilasciare la lock sul file
-		int ret, errnosv;
+		int ret;
 		PRINT("\nunlockFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(unlockFile(abspath), ret);
 		if (ret == -1) { 
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 		free(abspath);
@@ -678,7 +666,7 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 		}
 
 		// invoco la funzione dell'API per aprire il file
-		int ret, errnosv;
+		int ret;
 		PRINT("\nopenFile(pathname = %s, flags = O_LOCK)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, O_LOCK), ret);
 		// se il file è già aperto invoco la funzione dell'API per acquisire la lock sul file
@@ -686,16 +674,14 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 			PRINT("\nlockFile(pathname = %s)", abspath);
 			RETRY_IF_BUSY(lockFile(abspath), ret);
 			if (ret == -1) { 
-				errnosv = errno;
 				free(abspath);
-				if (should_exit(errnosv)) return -1;
+				if (should_exit(errno)) return -1;
 				continue;
 			}
 		}
 		else if (ret == -1) { 
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 
@@ -703,9 +689,8 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\nremoveFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(removeFile(abspath), ret);
 		if (ret == -1) { 
-			errnosv = errno;
 			free(abspath);
-			if (should_exit(errnosv)) return -1;
+			if (should_exit(errno)) return -1;
 			continue;
 		}
 		free(abspath);

@@ -432,7 +432,7 @@ list_t* cmdline_parser(int argc, char* argv[], char** socket_path) {
 				errno = 0;
 				return NULL;
 			case ':': 
-			    // controllo se l'opzione è R, il cui argomento è opzionale
+				// controllo se l'opzione è R, il cui argomento è opzionale
 				if (optopt == 'R') {
 					cmdline_operation = cmdline_operation_create('R');
 					if (cmdline_operation == NULL) {
@@ -472,6 +472,7 @@ list_t* cmdline_parser(int argc, char* argv[], char** socket_path) {
 		strcpy(*socket_path, DEFAULT_SOCKET_PATH);
 	}
 	// estraggo l'ultima operazione aggiunta alla lista
+	errno = 0;
 	cmdline_operation = list_head_remove(cmdline_operation_list);
 	if (errno != 0) {
 		errnosv = errno;

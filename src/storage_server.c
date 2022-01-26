@@ -36,9 +36,9 @@
  * @var eviction_policy      Politica di espulsione dei file dallo storage
  * @var files_queue          Coda dei file memorizzati
  * @var files_ht             Tabella hash thread safe per i file memorizzati
- * @var connected_clients    Tabella hash thread safe per i clienti connessi
+ * @var connected_clients    Tabella hash thread safe per i client connessi
  * @var mutex                Mutex per l'accesso in mutua esclusione allo storage
- * @var logger               Oggetto logger
+ * @var logger               Puntatore alla struttura che rappresenta il logger
  */
 typedef struct storage {
 	size_t max_files;
@@ -121,7 +121,7 @@ typedef struct client {
  * @brief                    Scrive al file descriptor fd il buffer buf, memorizza il valore ritornato dalla write in r e
  *                           stampa eventualmente sullo stderr l'errore verificatosi.
  * 
- * @param fd                 File descriptor del cliente
+ * @param fd                 File descriptor del client
  * @param buf                Riferimento al buffer da scrivere
  * @param size               Dimensione del buffer buf
  * @param r                  Valore ritornato dalla scrittura
@@ -138,7 +138,7 @@ typedef struct client {
  * @brief                    Legge dal file descriptor fd nel buffer buf, memorizza il valore ritornato dalla read in r e
  *                           stampa eventualmente sullo stderr l'errore verificatosi.
  * 
- * @param fd                 File descriptor del cliente
+ * @param fd                 File descriptor del client
  * @param buf                Riferimento al buffer da leggere
  * @param size               Dimensione del buffer buf
  * @param r                  Valore ritornato dalla scrittura
@@ -152,9 +152,9 @@ typedef struct client {
 
 /**
  * @function                 send_response_code()
- * @brief                    Invia al cliente associato al file descriptor fd il codice di risposta code.
+ * @brief                    Invia al client associato al file descriptor fd il codice di risposta code.
  * 
- * @param fd                 File descriptor del cliente
+ * @param fd                 File descriptor del client
  * 
  * @return                   0 in caso di sucesso, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  * @note                     Errno viene eventualmente settato da writen().
@@ -169,9 +169,9 @@ static int send_response_code(int fd, response_code_t code) {
 
 /**
  * @function                 send_size()
- * @brief                    Invia al cliente associato al file descriptor fd size.
+ * @brief                    Invia al client associato al file descriptor fd size.
  * 
- * @param fd                 File descriptor del cliente
+ * @param fd                 File descriptor del client
  * @param size               Valore da inviare
  * 
  * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
@@ -187,9 +187,9 @@ static int send_size(int fd, size_t size) {
 
 /**
  * @function                 send_file_name()
- * @brief                    Invia al cliente associato al file descriptor fd la dimensione del path path_size e path.
+ * @brief                    Invia al client associato al file descriptor fd la dimensione del path path_size e path.
  * 
- * @param fd                 File descriptor del cliente
+ * @param fd                 File descriptor del client
  * @param path_size          Dimensione del path 
  * @param path               Path del file
  * 
@@ -208,10 +208,10 @@ static int send_file_name(int fd, size_t path_size, char* path) {
 
 /**
  * @function                 send_file_content()
- * @brief                    Invia al cliente associato al file descriptor fd la dimensione del file file_size e il contenuto 
+ * @brief                    Invia al client associato al file descriptor fd la dimensione del file file_size e il contenuto 
  *                           del file file_content.
  * 
- * @param fd                 File descriptor del cliente
+ * @param fd                 File descriptor del client
  * @param file_size          Dimensione del file
  * @param file_content       Contenuto del file
  * 
@@ -302,8 +302,8 @@ static void destroy_file(file_t* file) {
  * @brief                    Paragona due strutture che rappresentano file.
  *                           Due file sono uguali se i loro path sono uguali.
  * 
- * @param a                  Primo oggetto file da confrontare
- * @param b                  Secondo oggetto file da confrontare
+ * @param a                  Primo file da confrontare
+ * @param b                  Secondo file da confrontare
  * 
  * @return                   1 se i file sono uguali, 0 altrimenti.
  */
@@ -338,16 +338,15 @@ static evicted_file_t* init_evicted_file(file_t* file) {
 	evicted_file_t* evicted_file = malloc(sizeof(evicted_file_t));
 	if (!evicted_file)
 		return NULL;
+
 	size_t path_size = strlen(file->path)+1;
-	char* file_path = calloc(path_size, sizeof(char));
-	if (!file_path) {
+	evicted_file->path_size = path_size;
+	evicted_file->path = calloc(path_size, sizeof(char));
+	if (!evicted_file->path) {
 		free(evicted_file);
 		return NULL;
 	}
-	strcpy(file_path, file->path);
-
-	evicted_file->path_size = path_size;
-	evicted_file->path = file_path;
+	strcpy(evicted_file->path, file->path);
 
 	evicted_file->content_size = file->content_size;
 	evicted_file->content = file->content;
@@ -384,10 +383,10 @@ static void destroy_evicted_file(evicted_file_t* evicted_file) {
  * @brief                    Confronta due strutture che rappresentano file espulsi dallo storage.
  *                           Essi sono uguali se il loro path è uguale.
  *
- * @param a                  Primo oggetto da confrontare
- * @param b                  Secondo oggetto da confrontare
+ * @param a                  Primo file da confrontare
+ * @param b                  Secondo file da confrontare
  *
- * @return                   1 se gli oggetti sono uguali, 0 altrimenti.
+ * @return                   1 se i file sono uguali, 0 altrimenti.
  */
 static int cmp_evicted_file(void* a, void* b) {
 	if (!a && ! b)
@@ -536,11 +535,11 @@ int new_connection_handler(storage_t* storage, int client_fd) {
 	}
 
 	int r;
-	// creo un oggetto cliente
+	// alloco un puntatore a una struttura che rappresenta un client
 	client_t* client = NULL;
 	EQNULL_DO(init_client(client_fd), client, EXTF);
 
-	// aggiungo il client alla tabella hash di clienti connessi se non è già presente
+	// aggiungo il client alla tabella hash di client connessi se non è già presente
 	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
 	EQM1_DO(conc_hasht_contains(storage->connected_clients, &client_fd), r, EXTF);
 	if (r) {
@@ -592,7 +591,7 @@ static void update_file_usage_time(file_t* file, request_code_t op, eviction_pol
  *                           alla politica di espulsione policy.
  * @warning                  Questa funzione deve essere invocata avendo accesso esclusivo al file.
  * 
- * @param file               Oggetto file il cui contatore deve essere aggiornato
+ * @param file               Puntatore alla struttura che rappresenta il file il cui contatore deve essere aggiornato
  * @param op                 Operazione effettuata sul file
  * @param policy             Politica di espulsione
  */
@@ -640,12 +639,12 @@ static void update_file_usage_counter(file_t* file, request_code_t op, eviction_
 
 /**
  * @function                 give_lock_to_waiting_client()
- * @brief                    Estrae il primo cliente in attesa di acquisire la lock su file e gli assegna la lock.
+ * @brief                    Estrae il primo client in attesa di acquisire la lock su file e gli assegna la lock.
  *                           Se nessun client è in attesa di acquisire la lock setta il campo file->locked_by_fd a -1.
  * @warning                  Questa funzione deve essere invocata dopo aver acquisito la lock sulla tabella hash di file per 
  *                           l'accesso a file.
  * 
- * @param storage            Oggetto storage
+ * @param storage            Puntatore alla struttura che rappresenta lo storage
  * @param file               File il cui detentore della lock deve essere modificato
  * @param worker_id          Identificativo del worker thread che gestisce la richiesta
  * 
@@ -655,17 +654,17 @@ static void update_file_usage_counter(file_t* file, request_code_t op, eviction_
 static int give_lock_to_waiting_client(storage_t* storage, file_t* file, int worker_id, int master_fd) {
 	int r, fd;
 
-	// rimuovo il primo cliente in attesa di acquisire la lock su file
+	// rimuovo il primo client in attesa di acquisire la lock su file
 	ERRNOSET_DO(int_list_head_remove(file->pending_lock_fds, &fd), r, EXTF);
 	if (r == -1) {
-		// nessun cliente è in attesa di acquisire la lock
+		// nessun client è in attesa di acquisire la lock
 		file->locked_by_fd = -1;
 		return -1;
 	}
 
 	file->locked_by_fd = fd;
 
-	// recupero l'oggetto relativo al client divenuto il detentore della lock
+	// recupero il client divenuto detentore della lock
 	client_t* client;
 	EQM1_DO(conc_hasht_lock(storage->connected_clients, &fd), r, EXTF);
 	ERRNOSET_DO(conc_hasht_get_value(storage->connected_clients, &fd), client, EXTF);
@@ -673,7 +672,7 @@ static int give_lock_to_waiting_client(storage_t* storage, file_t* file, int wor
 		EQM1_DO(conc_hasht_unlock(storage->connected_clients, &fd), r, EXTF);
 		return -1;
 	}
-	// inserisco il file nella lista di file bloccati dal cliente
+	// inserisco il file nella lista di file bloccati dal client
 	EQM1_DO(list_tail_insert(client->locked_files, file), r, EXTF);
 	EQM1_DO(conc_hasht_unlock(storage->connected_clients, &fd), r, EXTF);
 
@@ -684,7 +683,7 @@ static int give_lock_to_waiting_client(storage_t* storage, file_t* file, int wor
 	if (send_response_code(fd, OK) == -1)
 		return fd;
 	
-	// comunico al master di aver servito il cliente che era in attesa
+	// comunico al master di aver servito il client che era in attesa
 	EQM1_DO(writen(master_fd, &fd, sizeof(int)), r, EXTF);
 	
 	return -1;
@@ -696,7 +695,7 @@ static int give_lock_to_waiting_client(storage_t* storage, file_t* file, int wor
  * @warning                  Questa funzione deve essere invocata dopo aver acquisito la lock sullo storage e sulla tabella 
  *                           hash di file per l'accesso a file.
  * 
- * @param storage            Oggetto storage
+ * @param storage            Puntatore alla struttura che rappresenta lo storage
  * @param file               File da distruggere
  */
 static void delete_file_from_storage(storage_t* storage, file_t* file) {
@@ -707,11 +706,10 @@ static void delete_file_from_storage(storage_t* storage, file_t* file) {
 	// elimino il file dalla coda
 	EQNULL_DO(list_remove_and_get(storage->files_queue, file), file, EXTF);
 
-	// per ogni cliente che ha aperto il file, lo tolgo dalla lista
 	client_t* client;
-	// itero sui desrittori dei clienti che hanno aperto il file
+	// itero sui desrittori dei client che hanno aperto il file
 	int_list_for_each(file->open_by_fds, fd) {
-		// recupero l'oggetto client
+		// recupero il client
 		EQM1_DO(conc_hasht_lock(storage->connected_clients, &fd), r, EXTF);
 		ERRNOSET_DO(conc_hasht_get_value(storage->connected_clients, &fd), client, EXTF);
 		// se non nullo rimuovo il file dalla lista di file aperti dal client
@@ -722,7 +720,7 @@ static void delete_file_from_storage(storage_t* storage, file_t* file) {
 	
 	// controllo se il file era stato bloccato da un client
 	if (file->locked_by_fd != -1) {
-		// recupero l'oggetto client
+		// recupero il client
 		EQM1_DO(conc_hasht_lock(storage->connected_clients, &(file->locked_by_fd)), r, EXTF);
 		ERRNOSET_DO(conc_hasht_get_value(storage->connected_clients, &(file->locked_by_fd)), client, EXTF);
 		// se non nullo rimuovo il file dalla lista di file bloccati dal client
@@ -742,7 +740,7 @@ static void delete_file_from_storage(storage_t* storage, file_t* file) {
  * @brief                    Elimina il client dallo storage.
  * @warning                  Questa funzione deve essere invocata senza avere alcuna lock acquisita.
  * 
- * @param storage            Oggetto storage
+ * @param storage            Puntatore alla struttura che rappresenta lo storage
  * @param master_fd          Descrittore per la comunicazione con il master thread
  * @param client_fd          Descrittore del client di cui chiudere la connessione
  * @param worker_id          Identificativo del worker thread che gestisce la richiesta
@@ -752,7 +750,7 @@ static void delete_file_from_storage(storage_t* storage, file_t* file) {
 static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd, int client_fd, int worker_id) {
 	int r;
 
-	// lista dei clienti di cui dovrò chiudere la connessione
+	// lista dei client di cui dovrò chiudere la connessione
 	int_list_t* clients_unreachable = NULL;
 	EQNULL_DO(int_list_create(), clients_unreachable, EXTF);
 	
@@ -762,35 +760,35 @@ static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd,
 	client_t* client;
 	
 	ERRNOSET_DO(conc_hasht_atomic_delete_and_get(storage->connected_clients, &client_fd, NULL), client, EXTF);
-	// le risorse associate al cliente sono già state deallocate
+	// le risorse associate al client sono già state deallocate
 	if (client == NULL) {
 		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 		return clients_unreachable;
 	}
 
 	file_t* file;
-	// itero sui file bloccati dal cliente
+	// itero sui file bloccati dal client
 	list_for_each(client->locked_files, file) {
 		if (file != NULL && file->path != NULL) {
 			EQM1_DO(conc_hasht_lock(storage->files_ht, file->path), r, EXTF); 
-			// passo la lock sul file a un eventuale cliente in attesa
+			// passo la lock sul file a un eventuale client in attesa
 			int fd = give_lock_to_waiting_client(storage, file, worker_id, master_fd);
 			/* se nel contattare il client a cui passare la lock ho riscontrato che si è disconnesso
-			   aggiungo il suo descrittore alla lista di clienti di cui dovrò chiudere la connessione */
+			   aggiungo il suo descrittore alla lista di client di cui dovrò chiudere la connessione */
 			if (fd != -1)
 				EQM1_DO(int_list_tail_insert(clients_unreachable, fd), r, EXTF);
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
 		}
 	}
 
-	// itero sui file aperti dal cliente
+	// itero sui file aperti dal client
 	list_for_each(client->opened_files, file) {
 		if (file != NULL && file->path != NULL) {
 			EQM1_DO(conc_hasht_lock(storage->files_ht, file->path), r, EXTF);
 			// aggiorno i metadati del file necessari per il caching
 			update_file_usage_counter(file, CLOSE, storage->eviction_policy);
 			update_file_usage_time(file, CLOSE, storage->eviction_policy);
-			// rimuovo il cliente dalla lista di descrittori di clienti che hanno aperto il file
+			// rimuovo il client dalla lista di descrittori di client che hanno aperto il file
 			EQM1_DO(int_list_remove(file->open_by_fds, client_fd), r, EXTF);
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
 		}
@@ -798,7 +796,7 @@ static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd,
 
 	NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 
-	// comunico al master che il cliente si è disconnesso
+	// comunico al master che il client si è disconnesso
 	int neg_client_fd = -client_fd;
 	EQM1_DO(writen(master_fd, &neg_client_fd, sizeof(int)), r, EXTF);
 
@@ -809,10 +807,10 @@ static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd,
 
 /**
  * @function                 close_client_connection()
- * @brief                    Chiude la connessione del cliente liberando le risorse associate.
+ * @brief                    Chiude la connessione del client liberando le risorse associate.
  * @warning                  Questa funzione deve essere invocata senza avere alcuna lock acquisita.
  * 
- * @param storage            Oggetto storage
+ * @param storage            Puntatore alla struttura che rappresenta lo storage
  * @param master_fd          Descrittore per la comunicazione con il master thread
  * @param client_fd          Descrittore del client di cui chiudere la connessione
  * @param worker_id          Identificativo del worker thread che gestisce la richiesta
@@ -820,12 +818,12 @@ static int_list_t* delete_client_from_storage(storage_t* storage, int master_fd,
 void close_client_connection(storage_t* storage, int master_fd, int client_fd, int worker_id) {
 	int r, fd;
 
-	// lista dei descrittori dei clienti di cui chiudere la connessione
+	// lista dei descrittori dei client di cui chiudere la connessione
 	int_list_t* clients_to_close = NULL;
 	EQNULL_DO(int_list_create(), clients_to_close, EXTF);
 	EQM1_DO(int_list_tail_insert(clients_to_close, client_fd), r, EXTF);
 
-	// lista di clienti che si sono disconnessi
+	// lista di client che si sono disconnessi
 	int_list_t* clients_unreachable;
 	// itero fino a che la lista non è vuota
 	EQM1_DO(int_list_is_empty(clients_to_close), r, EXTF);
@@ -834,7 +832,7 @@ void close_client_connection(storage_t* storage, int master_fd, int client_fd, i
 		EQM1_DO(int_list_head_remove(clients_to_close, &fd), r, EXTF);
 		// libero le risorse associate alla connessione del client
 		clients_unreachable = delete_client_from_storage(storage, master_fd, fd, worker_id);
-		// concateno alla lista di clienti di cui chiudere la connessione la lista di clienti disconnessi
+		// concateno alla lista di client di cui chiudere la connessione la lista di client disconnessi
 		EQM1_DO(int_list_concatenate(clients_to_close, clients_unreachable), r, EXTF);
 		int_list_destroy(clients_unreachable);
 		EQM1_DO(int_list_is_empty(clients_to_close), r, EXTF);
@@ -844,13 +842,13 @@ void close_client_connection(storage_t* storage, int master_fd, int client_fd, i
 
 /**
  * @function                 notify_clients_file_not_exists()
- * @brief                    Notifica ai clienti in attesa di acquisire la lock sul file file_path che il file non esiste.
+ * @brief                    Notifica ai client in attesa di acquisire la lock sul file file_path che il file non esiste.
  * @warning                  Questa funzione deve essere invocata senza avere alcuna lock acquisita.
  * 
- * @param storage            Oggetto storage
+ * @param storage            Puntatore alla struttura che rappresenta lo storage
  * @param file_path          Il file rimosso dallo storage
  * @param master_fd          Descrittore per la comunicazione con il master thread
- * @param clients_waiting    Lista dei descrittori dei clienti in attesa di acquisire la lock sul file file_path
+ * @param clients_waiting    Lista dei descrittori dei client in attesa di acquisire la lock sul file file_path
  * @param worker_id          Identificativo del worker thread che gestisce la richiesta
  */
 static void notify_clients_file_not_exists(storage_t* storage, 
@@ -863,12 +861,12 @@ static void notify_clients_file_not_exists(storage_t* storage,
 	ERRNOSET_DO(int_list_get_length(clients_waiting), len, EXTF); 
 	
 	for (int i = 0; i < len; i ++) {
-		// rimuovo dalla lista il file descriptor del cliente in attesa
+		// rimuovo dalla lista il file descriptor del client in attesa
 		EQM1_DO(int_list_head_remove(clients_waiting, &fd), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(LOCK), resp_code_to_str(FILE_NOT_EXISTS), fd, file_path, 0));
-		/* invio al cliente che il file non esiste e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* invio al client che il file non esiste e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, fd, worker_id);
 		else
@@ -881,7 +879,7 @@ static void notify_clients_file_not_exists(storage_t* storage,
  * @brief                    Espelle un file dallo storage.
  * @warning                  Questa funzione deve essere invocata dopo aver acquisito la lock sullo storage.
  * 
- * @param storage            Oggetto storage
+ * @param storage            Puntatore alla struttura che rappresenta lo storage
  * @param path_needed        Path del file che non deve essere espulso, 
  *                           NULL se tutti i file possono essere espulsi
  * 
@@ -981,7 +979,7 @@ static evicted_file_t* evict_file(storage_t* storage, char* path_needed) {
 
 	EQM1_DO(conc_hasht_lock(storage->files_ht, victim->path), r, EXTF);
 
-	// creo un oggetto evicted_file
+	// alloco un puntatore a una struttura che rappresenta un file espulso
 	evicted_file_t* evicted_file = NULL;
 	EQNULL_DO(init_evicted_file(victim), evicted_file, EXTF);
 
@@ -1157,7 +1155,7 @@ int rejected_task_handler(storage_t* storage,
 		client_fd, req->file_path, 
 		0));
 
-	// rispondo al cliente comunicando che il server è momentaneamente non disponibile
+	// rispondo al client comunicando che il server è momentaneamente non disponibile
 	if (send_response_code(client_fd, TEMPORARILY_UNAVAILABLE) == -1) {
 		close_client_connection(storage, master_fd, client_fd, MASTER_ID);
 		disconnected = 1;
@@ -1200,8 +1198,8 @@ int open_file_handler(storage_t* storage,
 			NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 				worker_id, req_code_to_str(mode), resp_code_to_str(FILE_ALREADY_EXISTS), client_fd, file_path, 0));
-			/* rispondo al cliente che il file già esiste e comunico al master di aver servito il cliente
-			   (in caso di errore chiudo la connessione del cliente) */
+			/* rispondo al client che il file già esiste e comunico al master di aver servito il client
+			   (in caso di errore chiudo la connessione del client) */
 			if (send_response_code(client_fd, FILE_ALREADY_EXISTS) == -1)
 				close_client_connection(storage, master_fd, client_fd, worker_id);
 			else
@@ -1227,9 +1225,9 @@ int open_file_handler(storage_t* storage,
 				NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 				LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 					worker_id, req_code_to_str(mode), resp_code_to_str(COULD_NOT_EVICT), client_fd, file_path, 0));
-				/* rispondo al cliente che non è stato possibile espellere file
-				   e comunico al master di aver servito il cliente
-				   (in caso di errore chiudo la connessione del cliente) */
+				/* rispondo al client che non è stato possibile espellere file
+				   e comunico al master di aver servito il client
+				   (in caso di errore chiudo la connessione del client) */
 				if (send_response_code(client_fd, COULD_NOT_EVICT) == -1)
 					close_client_connection(storage, master_fd, client_fd, worker_id);
 				else
@@ -1279,8 +1277,8 @@ int open_file_handler(storage_t* storage,
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 				worker_id, req_code_to_str(mode), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
-			/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
-			   (in caso di errore chiudo la connessione del cliente) */
+			/* rispondo al client che il file non esiste e comunico al master di aver servito il client
+			   (in caso di errore chiudo la connessione del client) */
 			if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
 				close_client_connection(storage, master_fd, client_fd, worker_id);
 			else
@@ -1295,8 +1293,8 @@ int open_file_handler(storage_t* storage,
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 				worker_id, req_code_to_str(mode), resp_code_to_str(FILE_ALREADY_OPEN), client_fd, file_path, 0));
-			/* rispondo al cliente che il file è già stato aperto e comunico al master di aver servito il cliente
-			   (in caso di errore chiudo la connessione del cliente) */
+			/* rispondo al client che il file è già stato aperto e comunico al master di aver servito il client
+			   (in caso di errore chiudo la connessione del client) */
 			if (send_response_code(client_fd, FILE_ALREADY_OPEN) == -1)
 				close_client_connection(storage, master_fd, client_fd, worker_id);
 			else
@@ -1310,15 +1308,15 @@ int open_file_handler(storage_t* storage,
 	update_file_usage_counter(file, mode, storage->eviction_policy);
 	update_file_usage_time(file, mode, storage->eviction_policy);
 
-	// inserisco il cliente tra coloro che hanno aperto il file
+	// inserisco il client tra coloro che hanno aperto il file
 	EQM1_DO(int_list_tail_insert(file->open_by_fds, client_fd), r, EXTF);
 
-	// recupero l'oggetto relativo al cliente richiedente
+	// recupero il client richiedente
 	client_t* client;
 	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
 	EQNULL_DO(conc_hasht_get_value(storage->connected_clients, &client_fd), client, EXTF);
 
-	// inserisco il file tra quelli aperti dal cliente
+	// inserisco il file tra quelli aperti dal client
 	EQM1_DO(list_tail_insert(client->opened_files, file), r, EXTF);
 
 	// controllo se la modalità di apertura del file prevede la lock
@@ -1329,14 +1327,14 @@ int open_file_handler(storage_t* storage,
 			EQM1_DO(list_tail_insert(client->locked_files, file), r, EXTF);
 		}
 		else {
-			// il file è già bloccato, inserisco il cliente che ha fatto richiesta nella lista di attesa
+			// il file è già bloccato, inserisco il client che ha fatto richiesta nella lista di attesa
 			EQM1_DO(int_list_tail_insert(file->pending_lock_fds, client_fd), r, EXTF);
 			EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 				worker_id, req_code_to_str(mode), CLIENT_IS_WAITING, client_fd, file_path, 0));
 			if (evicted_file != NULL) {
-				// notifico ai clienti in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
+				// notifico ai client in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
 				notify_clients_file_not_exists(storage, file_path, master_fd, evicted_file->pending_lock_fds, worker_id);
 				destroy_evicted_file(evicted_file);
 			}
@@ -1353,15 +1351,15 @@ int open_file_handler(storage_t* storage,
 			worker_id, req_code_to_str(mode), resp_code_to_str(OK), client_fd, file_path, 0));
 	}
 
-	/* invio l'esito positivo al cliente e comunico al master di aver servito il cliente
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio l'esito positivo al client e comunico al master di aver servito il client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_response_code(client_fd, OK) == -1)
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 	else
 		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
 
 	if (evicted_file != NULL) {
-		// notifico ai clienti in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
+		// notifico ai client in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
 		notify_clients_file_not_exists(storage, evicted_file->path, master_fd, evicted_file->pending_lock_fds, worker_id);
 		destroy_evicted_file(evicted_file);
 	}
@@ -1399,8 +1397,8 @@ int write_file_handler(storage_t* storage,
 		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 			worker_id, req_code_to_str(mode), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
-		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che il file non esiste e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1410,14 +1408,14 @@ int write_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// controllo, in caso di WRITE, se il cliente può effettuare l'operazione
+	// controllo, in caso di WRITE, se il client può effettuare l'operazione
 	if (mode == WRITE && file->can_write_fd != client_fd) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 			worker_id, req_code_to_str(mode), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1428,15 +1426,15 @@ int write_file_handler(storage_t* storage,
 	}
 
 	if (mode == APPEND) {
-		// in caso di append controllo se il cliente ha aperto il file e se il file è bloccato da un altro cliente
+		// in caso di append controllo se il client ha aperto il file e se il file è bloccato da un altro client
 		EQM1_DO(int_list_contains(file->open_by_fds, client_fd), r, EXTF);
 		if (!r || (file->locked_by_fd != -1 && file->locked_by_fd != client_fd)) {
 			EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 			NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 				worker_id, req_code_to_str(mode), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-			/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-			(in caso di errore chiudo la connessione del cliente) */
+			/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+			(in caso di errore chiudo la connessione del client) */
 			if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 				close_client_connection(storage, master_fd, client_fd, worker_id);
 			else
@@ -1453,8 +1451,8 @@ int write_file_handler(storage_t* storage,
 		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 			worker_id, req_code_to_str(mode), resp_code_to_str(TOO_LONG_CONTENT), client_fd, file_path, 0));
-		/* rispondo al cliente che il contenuto del file è troppo grande e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che il contenuto del file è troppo grande e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, TOO_LONG_CONTENT) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1483,8 +1481,8 @@ int write_file_handler(storage_t* storage,
 			NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 			LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 				worker_id, req_code_to_str(mode), resp_code_to_str(COULD_NOT_EVICT), client_fd, file_path, 0));
-			/* rispondo al cliente che non è stato possibile espellere file e comunico al master di aver servito il cliente
-			   (in caso di errore chiudo la connessione del cliente) */
+			/* rispondo al client che non è stato possibile espellere file e comunico al master di aver servito il client
+			   (in caso di errore chiudo la connessione del client) */
 			if (send_response_code(client_fd, COULD_NOT_EVICT) == -1)
 				close_client_connection(storage, master_fd, client_fd, worker_id);
 			else
@@ -1541,7 +1539,7 @@ int write_file_handler(storage_t* storage,
 			file->content_size += content_size;
 			free(content);
 		}
-		// elimino la possibilità del cliente di effettuare una write sul file
+		// elimino la possibilità del client di effettuare una write sul file
 		file->can_write_fd = -1;
 	}
 	
@@ -1551,25 +1549,25 @@ int write_file_handler(storage_t* storage,
 	
 	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 
-	/* invio l'esito positivo al cliente
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio l'esito positivo al client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_response_code(client_fd, OK) == -1) {
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 		goto write_exit;
 	}
 
-	/* invio al cliente il numero di file espulsi
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio al client il numero di file espulsi
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_size(client_fd, evicted_files_num) == -1) {
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 		goto write_exit;
 	}
 
 	evicted_file_t* evicted_file;
-	// invio al cliente i file espulsi
+	// invio al client i file espulsi
 	for (int i = 0; i < evicted_files_num; i ++) {
 		EQNULL_DO(list_head_remove(evicted_files), evicted_file, EXTF);
-		// notifico ai clienti in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
+		// notifico ai client in attesa di acquisire la lock sul file rimosso che il file espulso non esiste
 		notify_clients_file_not_exists(storage, evicted_file->path, master_fd, evicted_file->pending_lock_fds, worker_id);
 		// invio il nome del file
 		if (send_file_name(client_fd, evicted_file->path_size, evicted_file->path) == -1) {
@@ -1584,7 +1582,7 @@ int write_file_handler(storage_t* storage,
 		destroy_evicted_file(evicted_file);
 	}
 
-	// comunico al master di aver servito il cliente
+	// comunico al master di aver servito il client
 	EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
 
 write_exit:
@@ -1613,8 +1611,8 @@ int read_file_handler(storage_t* storage,
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(READ), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
-		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che il file non esiste e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1623,14 +1621,14 @@ int read_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// controllo se il cliente ha aperto il file
+	// controllo se il client ha aperto il file
 	EQM1_DO(int_list_contains(file->open_by_fds, client_fd), r, EXTF);
 	if (!r) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(READ), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1639,13 +1637,13 @@ int read_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// controllo se il file è bloccato da un altro cliente
+	// controllo se il file è bloccato da un altro client
 	if (file->locked_by_fd != -1 && file->locked_by_fd != client_fd) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(READ), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1661,8 +1659,8 @@ int read_file_handler(storage_t* storage,
 	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%zu",
 		worker_id, req_code_to_str(READ), resp_code_to_str(OK), client_fd, file_path, file->content_size));
 
-	/* invio l'esito positivo al cliente
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio l'esito positivo al client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_response_code(client_fd, OK) == -1) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		close_client_connection(storage, master_fd, client_fd, worker_id);
@@ -1670,8 +1668,8 @@ int read_file_handler(storage_t* storage,
 		return 0;
 	}
 	
-	/* invio il contenuto del file al cliente
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio il contenuto del file al client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_file_content(client_fd, file->content_size, file->content) == -1) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		close_client_connection(storage, master_fd, client_fd, worker_id);
@@ -1681,7 +1679,7 @@ int read_file_handler(storage_t* storage,
 
 	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 
-	// comunico al master di aver servito il cliente
+	// comunico al master di aver servito il client
 	EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
 
 	free(file_path);
@@ -1707,7 +1705,7 @@ int readn_file_handler(storage_t* storage,
 	list_t* files_to_read;
 	size_t file_sendable = 0;
 	
-	// creo una lista per memorizzare i file che possono essere letti al cliente
+	// creo una lista per memorizzare i file che possono essere letti al client
 	EQNULL_DO(list_create(cmp_file, (void (*)(void*)) destroy_file), files_to_read, EXTF);
 
 	file_t* file;
@@ -1726,12 +1724,12 @@ int readn_file_handler(storage_t* storage,
 
 	NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 
-	// invio l'esito positivo al cliente
+	// invio l'esito positivo al client
 	int err = 0;
 	if (send_response_code(client_fd, OK) == -1)
 		err = 1;
 
-	// invio al cliente il numero di file che verranno inviati
+	// invio al client il numero di file che verranno inviati
 	if (!err) {
 		if (send_size(client_fd, file_sendable) == -1)
 			err = 1;
@@ -1746,12 +1744,12 @@ int readn_file_handler(storage_t* storage,
 	list_for_each(files_to_read, file) {
 		if (!err) {
 			size_t path_size = strlen(file->path) + 1;
-			// invio al cliente il nome del file
+			// invio al client il nome del file
 			if (send_file_name(client_fd, path_size, file->path) == -1)
 				err = 1;
 		}
 		if (!err) {
-			// invio al cliente il contenuto del file
+			// invio al client il contenuto del file
 			if (send_file_content(client_fd, file->content_size, file->content) == -1)
 				err = 1;
 		}
@@ -1775,8 +1773,8 @@ int readn_file_handler(storage_t* storage,
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file->path), r, EXTF);
 	}
 
-	/* se si è verificato un errore chiudo la connessione del cliente 
-	   altrimenti comunico al master di aver servito il cliente */
+	/* se si è verificato un errore chiudo la connessione del client
+	   altrimenti comunico al master di aver servito il client */
 	if (err)
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 	else
@@ -1806,8 +1804,8 @@ int lock_file_handler(storage_t* storage,
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(LOCK), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
-		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che il file non esiste e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1816,14 +1814,14 @@ int lock_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// controllo se il cliente ha aperto il file
+	// controllo se il client ha aperto il file
 	EQM1_DO(int_list_contains(file->open_by_fds, client_fd), r, EXTF);
 	if (!r) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(LOCK), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1832,13 +1830,13 @@ int lock_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// controllo se il cliente ha già acquisito la lock
+	// controllo se il client ha già acquisito la lock
 	if (file->locked_by_fd == client_fd) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 			worker_id, req_code_to_str(LOCK), resp_code_to_str(FILE_ALREADY_LOCKED), client_fd, file_path, 0));
-		/* rispondo al cliente che ha già acquisito la lock e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che ha già acquisito la lock e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, FILE_ALREADY_LOCKED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1851,9 +1849,9 @@ int lock_file_handler(storage_t* storage,
 	update_file_usage_counter(file, LOCK, storage->eviction_policy);
 	update_file_usage_time(file, LOCK, storage->eviction_policy);
 
-	// controllo se il file è bloccato da un altro cliente
+	// controllo se il file è bloccato da un altro client
 	if (file->locked_by_fd != -1) {
-		// inserisco il cliente che ne ha fatto richiesta nella lista di attesa
+		// inserisco il client che ne ha fatto richiesta nella lista di attesa
 		EQM1_DO(int_list_tail_insert(file->pending_lock_fds, client_fd), r, EXTF);
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
@@ -1864,11 +1862,11 @@ int lock_file_handler(storage_t* storage,
 
 	file->locked_by_fd = client_fd;
 
-	// recupero l'oggetto relativo al cliente richiedente
+	// recupero il client richiedente
 	client_t* client;
 	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
 	EQNULL_DO(conc_hasht_get_value(storage->connected_clients, &client_fd), client, EXTF);
-	// inserisco il file nella lista di file bloccati dal cliente
+	// inserisco il file nella lista di file bloccati dal client
 	EQM1_DO(list_tail_insert(client->locked_files, file), r, EXTF);
 	EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
 
@@ -1877,8 +1875,8 @@ int lock_file_handler(storage_t* storage,
 	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 		worker_id, req_code_to_str(LOCK), resp_code_to_str(OK), client_fd, file_path, 0));
 
-	/* invio l'esito positivo al cliente e comunico al master di aver servito il cliente 
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio l'esito positivo al client e comunico al master di aver servito il client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_response_code(client_fd, OK) == -1)
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 	else
@@ -1908,8 +1906,8 @@ int unlock_file_handler(storage_t* storage,
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(UNLOCK), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
-		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che il file non esiste e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1918,13 +1916,13 @@ int unlock_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// controllo se il cliente ha acquisito la lock sul file
+	// controllo se il client ha acquisito la lock sul file
 	if (file->locked_by_fd != client_fd) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(UNLOCK), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -1933,22 +1931,22 @@ int unlock_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// recupero l'oggetto relativo al cliente richiedente
+	// recupero il client richiedente
 	client_t* client;
 	file_t* not_used;
 	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
 	EQNULL_DO(conc_hasht_get_value(storage->connected_clients, &client_fd), client, EXTF);
-	// rimuovo il file dalla lista di file bloccati dal cliente
+	// rimuovo il file dalla lista di file bloccati dal client
 	EQNULL_DO(list_remove_and_get(client->locked_files, file), not_used, EXTF);
 	EQM1_DO(conc_hasht_unlock(storage->connected_clients, &client_fd), r, EXTF);
 
 	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 		worker_id, req_code_to_str(UNLOCK), resp_code_to_str(OK), client_fd, file_path, 0));
 
-	// passo la lock sul file a un eventuale cliente in attesa
+	// passo la lock sul file a un eventuale client in attesa
 	int fd = give_lock_to_waiting_client(storage, file, worker_id, master_fd);
 
-	// elimino la possibilità del cliente di effettuare una write sul file
+	// elimino la possibilità del client di effettuare una write sul file
 	if (file->can_write_fd == client_fd)
 		file->can_write_fd = -1;
 
@@ -1958,14 +1956,14 @@ int unlock_file_handler(storage_t* storage,
 
 	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 	
-	/* invio l'esito positivo al cliente e comunico al master di aver servito il cliente 
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio l'esito positivo al client e comunico al master di aver servito il client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_response_code(client_fd, OK) == -1)
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 	else
 		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
 
-	// se nel contattare il cliente in attesa della lock ho riscontrato che si è disconnesso chiudo la connessione
+	// se nel contattare il client in attesa della lock ho riscontrato che si è disconnesso chiudo la connessione
 	if (fd != -1)
 		close_client_connection(storage, master_fd, fd, worker_id);
 
@@ -1996,8 +1994,8 @@ int remove_file_handler(storage_t* storage,
 		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 			worker_id, req_code_to_str(REMOVE), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
-		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che il file non esiste e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -2006,14 +2004,14 @@ int remove_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// controllo se il cliente ha acquisito la lock sul file
+	// controllo se il client ha acquisito la lock sul file
 	if (file->locked_by_fd != client_fd) {
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(REMOVE), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -2022,7 +2020,7 @@ int remove_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// memorizzo la lista di clienti in attesa di acquisire la lock sul file per poterli contattare in seguito
+	// memorizzo la lista di client in attesa di acquisire la lock sul file per poterli contattare in seguito
 	int_list_t* waiting_clients = file->pending_lock_fds;
 	file->pending_lock_fds = NULL;
 	// memorizzo la size del file per effettuare il logging in seguito alla rimozione
@@ -2046,14 +2044,14 @@ int remove_file_handler(storage_t* storage,
 
 	NEQ0_DO(pthread_mutex_unlock(&storage->mutex), r, errno = r; EXTF);
 
-	/* invio l'esito positivo al cliente e comunico al master di aver servito il cliente 
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio l'esito positivo al client e comunico al master di aver servito il client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_response_code(client_fd, OK) == -1)
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 	else
 		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
 
-	// notifico ai clienti in attesa di acquisire la lock sul file rimosso che il file non esiste
+	// notifico ai client in attesa di acquisire la lock sul file rimosso che il file non esiste
 	notify_clients_file_not_exists(storage, file_path, master_fd, waiting_clients, worker_id);
 
 	int_list_destroy(waiting_clients);
@@ -2081,8 +2079,8 @@ int close_file_handler(storage_t* storage,
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 			worker_id, req_code_to_str(CLOSE), resp_code_to_str(FILE_NOT_EXISTS), client_fd, file_path, 0));
-		/* rispondo al cliente che il file non esiste e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che il file non esiste e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -2091,15 +2089,15 @@ int close_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// rimuovo il descrittore del cliente dalla lista di descrittori dei clienti che hanno aperto il file
+	// rimuovo il descrittore del client dalla lista di descrittori dei client che hanno aperto il file
 	ERRNOSET_DO(int_list_remove(file->open_by_fds, client_fd), r, EXTF);
 	if (r == -1) {
-		// il cliente non aveva aperto il file
+		// il client non aveva aperto il file
 		EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 			worker_id, req_code_to_str(CLOSE), resp_code_to_str(OPERATION_NOT_PERMITTED), client_fd, file_path, 0));
-		/* rispondo al cliente che l'operazione non è consentita e comunico al master di aver servito il cliente
-		   (in caso di errore chiudo la connessione del cliente) */
+		/* rispondo al client che l'operazione non è consentita e comunico al master di aver servito il client
+		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(client_fd, OPERATION_NOT_PERMITTED) == -1)
 			close_client_connection(storage, master_fd, client_fd, worker_id);
 		else
@@ -2108,18 +2106,18 @@ int close_file_handler(storage_t* storage,
 		return 0;
 	}
 
-	// recupero l'oggetto relativo al cliente richiedente
+	// recupero il client richiedente
 	client_t* client;
 	file_t* not_used;
 	EQM1_DO(conc_hasht_lock(storage->connected_clients, &client_fd), r, EXTF);
 	EQNULL_DO(conc_hasht_get_value(storage->connected_clients, &client_fd), client, EXTF);
 
-	// rimuovo il file dalla lista di file aperti dal cliente
+	// rimuovo il file dalla lista di file aperti dal client
 	EQNULL_DO(list_remove_and_get(client->opened_files, file), not_used, EXTF);
 
-	// controllo se il cliente ha acquisito la lock sul file
+	// controllo se il client ha acquisito la lock sul file
 	if (file->locked_by_fd == client_fd) {
-		// rimuovo il file dalla lista di file bloccati dal cliente
+		// rimuovo il file dalla lista di file bloccati dal client
 		EQNULL_DO(list_remove_and_get(client->locked_files, file), not_used, EXTF);
 	}
 	
@@ -2127,14 +2125,14 @@ int close_file_handler(storage_t* storage,
 
 	int fd = -1;
 	if (file->locked_by_fd == client_fd) {
-		// passo la lock sul file a un eventuale cliente in attesa
+		// passo la lock sul file a un eventuale client in attesa
 		fd = give_lock_to_waiting_client(storage, file, worker_id, master_fd);
 	}
 
 	LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d", 
 		worker_id, req_code_to_str(CLOSE), resp_code_to_str(OK), client_fd, file_path, 0));
 
-	// elimino la possibilità del cliente di effettuare una write sul file
+	// elimino la possibilità del client di effettuare una write sul file
 	if (file->can_write_fd == client_fd)
 		file->can_write_fd = -1;
 
@@ -2144,14 +2142,14 @@ int close_file_handler(storage_t* storage,
 
 	EQM1_DO(conc_hasht_unlock(storage->files_ht, file_path), r, EXTF);
 
-	/* invio l'esito positivo al cliente e comunico al master di aver servito il cliente 
-	   (in caso di errore chiudo la connessione del cliente) */
+	/* invio l'esito positivo al client e comunico al master di aver servito il client
+	   (in caso di errore chiudo la connessione del client) */
 	if (send_response_code(client_fd, OK) == -1)
 		close_client_connection(storage, master_fd, client_fd, worker_id);
 	else
 		EQM1_DO(writen(master_fd, &client_fd, sizeof(int)), r, EXTF);
 
-	// se nel contattare il cliente in attesa della lock ho notato che si è disconnesso chiudo la connessione
+	// se nel contattare il client in attesa della lock ho notato che si è disconnesso chiudo la connessione
 	if (fd != -1)
 		close_client_connection(storage, master_fd, fd, worker_id);
 

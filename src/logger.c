@@ -56,7 +56,7 @@ int log_record(logger_t* logger, const char* message_fmt, ...) {
 	int r;
 	// Formatto il tempo corrente
 	time_t curr_time;
-    struct tm time_info;
+	struct tm time_info;
 	EQM1(time(&curr_time), r);
 	if (r == -1)
 		return -1;

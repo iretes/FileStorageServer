@@ -10,8 +10,10 @@
 #include <hasht.h>
 #include <conc_hasht.h>
 
-conc_hasht_t* conc_hasht_create(size_t n_buckets, size_t n_segments, unsigned int (*hash_function)(void*), 
-	int (*hash_key_compare)(void*, void*)) {
+conc_hasht_t* conc_hasht_create(size_t n_buckets, 
+				size_t n_segments, 
+				unsigned int (*hash_function)(void*), 
+				int (*hash_key_compare)(void*, void*)) {
 	int r, errnosv;
 	conc_hasht_t *cht = (conc_hasht_t*) malloc(sizeof(conc_hasht_t));
 	if (!cht)
@@ -54,8 +56,10 @@ conc_hasht_t* conc_hasht_create(size_t n_buckets, size_t n_segments, unsigned in
 	for (i = 0; i < cht->nsegments; i ++) {
 		if ((r = pthread_mutexattr_init(&(cht->mutex_attrs[i]))) != 0)
 			break;
-		if ((r = pthread_mutexattr_settype(&(cht->mutex_attrs[i]), PTHREAD_MUTEX_RECURSIVE)) != 0)
+		if ((r = pthread_mutexattr_settype(&(cht->mutex_attrs[i]), PTHREAD_MUTEX_RECURSIVE)) != 0) {
+			pthread_mutexattr_destroy(&(cht->mutex_attrs[i]));
 			break;
+		}
 		if ((r = pthread_mutex_init(&(cht->mutexs[i]), &(cht->mutex_attrs[i]))) != 0) {
 			pthread_mutexattr_destroy(&(cht->mutex_attrs[i]));
 			break;
@@ -183,7 +187,7 @@ int conc_hasht_unlock(conc_hasht_t* cht, void* key) {
 		errno = r;
 		return -1;
 	}
-    
+
 	return 0;
 }
 
