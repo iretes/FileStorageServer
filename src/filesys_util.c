@@ -1,6 +1,6 @@
 /**
  * @file               filesys_util.c
- * @brief              Implementazione delle routine di utilità per l'interazione con il file system
+ * @brief              Implementazione delle routine di utilità per l'interazione con il file system.
  */
 
 #include <stdlib.h>
@@ -81,7 +81,7 @@ char* get_absolute_path(const char* file_name) {
 
 /**
  * @function           get_num_digits()
- * @brief              Ritorna il numero di cifre di un intero
+ * @brief              Ritorna il numero di cifre di un intero.
  * 
  * @param n            L'intero di cui si vuole conoscere il numero di cifre
  * 

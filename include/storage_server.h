@@ -15,7 +15,7 @@
 
 /**
  * @def                   LOG()
- * @brief                 Controlla il valore di ritorno di una chiamata di log_record()
+ * @brief                 Controlla il valore di ritorno di una chiamata di log_record().
  */
 #define LOG(X) { \
     if (X == -1) { \
@@ -28,7 +28,7 @@ typedef struct storage storage_t;
 
 /**
  * @struct                request_t
- * @brief                 Struttura che raccoglie gli argomenti di una richiesta
+ * @brief                 Struttura che raccoglie gli argomenti di una richiesta.
  * 
  * @var code              Codice della richiesta
  * @var file_path         Path del file

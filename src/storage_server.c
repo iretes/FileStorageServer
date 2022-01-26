@@ -157,7 +157,7 @@ typedef struct client {
  * @param fd                 File descriptor del cliente
  * 
  * @return                   0 in caso di sucesso, -1 in caso di fallimento ed errno settato ad indicare l'errore.
- * @note                     Errno viene eventualmente settato da writen()
+ * @note                     Errno viene eventualmente settato da writen().
  */
 static int send_response_code(int fd, response_code_t code) {
 	int r;
@@ -187,14 +187,14 @@ static int send_size(int fd, size_t size) {
 
 /**
  * @function                 send_file_name()
- * @brief                    Invia al cliente associato al file descriptor fd la dimensione del path path_size e path
+ * @brief                    Invia al cliente associato al file descriptor fd la dimensione del path path_size e path.
  * 
  * @param fd                 File descriptor del cliente
  * @param path_size          Dimensione del path 
  * @param path               Path del file
  * 
- * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
- * @note                     Errno viene eventualmente settato da writen() o da send_size()
+ * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ * @note                     Errno viene eventualmente settato da writen() o da send_size().
  */
 static int send_file_name(int fd, size_t path_size, char* path) {
 	int r;
@@ -215,8 +215,8 @@ static int send_file_name(int fd, size_t path_size, char* path) {
  * @param file_size          Dimensione del file
  * @param file_content       Contenuto del file
  * 
- * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore
- * @note                     Errno viene eventualmente settato da writen() o da send_size()
+ * @return                   0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
+ * @note                     Errno viene eventualmente settato da writen() o da send_size().
  */
 static int send_file_content(int fd, size_t file_size, void* file_content) {
 	int r = 0;
@@ -590,7 +590,7 @@ static void update_file_usage_time(file_t* file, request_code_t op, eviction_pol
  * @function                 update_file_usage_counter()
  * @brief                    Aggiorna il contatore degli utilizzi di file in base al tipo di operazione effettuata op e 
  *                           alla politica di espulsione policy.
- * @warning                  Questa funzione deve essere invocata avendo accesso esclusivo al file
+ * @warning                  Questa funzione deve essere invocata avendo accesso esclusivo al file.
  * 
  * @param file               Oggetto file il cui contatore deve essere aggiornato
  * @param op                 Operazione effettuata sul file
@@ -844,8 +844,8 @@ void close_client_connection(storage_t* storage, int master_fd, int client_fd, i
 
 /**
  * @function                 notify_clients_file_not_exists()
- * @brief                    Notifica ai clienti in attesa di acquisire la lock sul file file_path che il file non esiste
- * @warning                  Questa funzione deve essere invocata senza avere alcuna lock acquisita
+ * @brief                    Notifica ai clienti in attesa di acquisire la lock sul file file_path che il file non esiste.
+ * @warning                  Questa funzione deve essere invocata senza avere alcuna lock acquisita.
  * 
  * @param storage            Oggetto storage
  * @param file_path          Il file rimosso dallo storage

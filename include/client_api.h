@@ -84,7 +84,7 @@ char* errno_to_str(int err);
  *                                 se msec < 0, se abstime.tv_sec < 0 o abstime.tv_nsec < 0 o >= 1000000000
  *                    EISCONN      se il client è già connesso alla socket
  *                    ETIMEDOUT    se non è stato possibile instaurare una connessione con il server entro il tempo assoluto 
- *                               abstime
+ *                                 abstime
  */
 int openConnection(const char* sockname, int msec, const struct timespec abstime);
 

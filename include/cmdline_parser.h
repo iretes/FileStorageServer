@@ -11,6 +11,7 @@
 /**
  * @function            cmdline_parser()
  * @brief               Effettua il parsing degli argomenti della linea di comando del client.
+ * @warning             Questa funzione non è thread safe.
  * 
  * @param argc          Il numero di argomenti della linea di comando
  * @param argv          Gli argomenti della linea di comando

@@ -1,6 +1,6 @@
 /**
  * @file     conc_hasht.c
- * @brief    Implementazione dell'interfaccia della tabella hash thread safe con liste di trabocco
+ * @brief    Implementazione dell'interfaccia della tabella hash thread safe con liste di trabocco.
  */
 
 #include <stdlib.h>

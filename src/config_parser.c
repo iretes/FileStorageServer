@@ -1,8 +1,8 @@
 /**
- * @file     config_parser.c
- * @brief    Implementazione del parsing del file di configurazione
+ * @file           config_parser.c
+ * @brief          Implementazione del parsing del file di configurazione.
  */
- 
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,7 +17,11 @@
 #include <util.h>
 
 /** 
- * Controlla che la lunghezza della stringa, se non ammissibile @c goto lbl
+ * @def            CHECK_STR_LEN_GOTO()
+ * @brief          Controlla la lunghezza della stringa, se non ammissibile @c goto lbl.
+ * 
+ * @param str      Stringa da controllare
+ * @param lbl      Etichetta
  */
 #define CHECK_STR_LEN_GOTO(str, lbl) \
 	do { \
@@ -28,18 +32,28 @@
 	} while(0); 
 
 /** 
- * Controlla che flag sia false, se non è così @c goto lbl
+ * @def            CHECK_REPEATED_GOTO()
+ * @brief          Controlla che flag sia false, se non è così @c goto lbl.
+ * 
+ * @param flag     Boolean da controllare
+ * @param param    Stringa associata al parametro
+ * @param lbl      Etichetta
  */
-#define CHECK_REPEATED_GOTO(flag, parname, lbl) \
+#define CHECK_REPEATED_GOTO(flag, param, lbl) \
 	do { \
 		if (flag) { \
-			fprintf(stderr, "ERR: '%s' può essere specificato una sola volta\n", parname); \
+			fprintf(stderr, "ERR: '%s' può essere specificato una sola volta\n", param); \
 			goto lbl; \
 		} \
 	} while(0);
 
 /** 
- * Controlla che val sia positivo, se non è così @c goto lbl
+ * @def            CHECK_NEG_GOTO()
+ * @brief          Controlla che val sia positivo, se non è così @c goto lbl.
+ * 
+ * @param val      Valore numerico da controllare
+ * @param param    Stringa associata al parametro
+ * @param lbl      Etichetta
  */
 #define CHECK_NEG_GOTO(val, param, lbl) \
 	do { \
@@ -50,7 +64,12 @@
 	} while(0);
 
 /** 
- * Controlla che str rappresenti un numero valido, se non è così @c goto lbl
+ * @def            CHECK_NUMBER_GOTO()
+ * @brief          Controlla che str rappresenti un numero valido, se non è così @c goto lbl.
+ * 
+ * @param str      Stringa da controllare
+ * @param num      Long per il salvataggio del valore numerico rappresentato da str
+ * @param lbl      Etichetta
  */
 #define CHECK_NUMBER_GOTO(str, num, lbl) \
 	do { \
@@ -61,7 +80,12 @@
 	} while(0);
 
 /** 
- * Controlla che val sia minore di limit, se non è così @c goto lbl
+ * @def            CHECK_GREATER()
+ * @brief          Controlla che val sia minore di limit, se non è così @c goto lbl.
+ * 
+ * @param val      Valore numerico da controllare
+ * @param limit    Valore di cui val deve essere minore
+ * @param lbl      Etichetta
  */
 #define CHECK_GREATER(val, limit, lbl) \
 	do { \
@@ -70,9 +94,14 @@
 			goto lbl; \
 		} \
 	} while(0);
-    
+
 /** 
- * Copia la stringa src nella stringa dest, in caso di fallimento @c goto lbl
+ * @def            STR_CPY_GOTO()
+ * @brief          Copia la stringa src nella stringa dest, in caso di fallimento @c goto lbl.
+ * 
+ * @param src      Stringa sorgente
+ * @param dest     Stringa destinazione
+ * @param lbl      Etichetta
  */
 #define STR_CPY_GOTO(src, dest, lbl) \
 	do { \
@@ -86,7 +115,11 @@
 	} while(0); \
 
 /** 
- * Controlla che str contenga solo caratteri di spaziatura, se non è così @c goto lbl
+ * @def            CHECK_ALL_SPACES_GOTO()
+ * @brief          Controlla che str contenga solo caratteri di spaziatura, se non è così @c goto lbl.
+ * 
+ * @param str      Stringa da controllare
+ * @param lbl      Etichetta
  */
 #define CHECK_ALL_SPACES_GOTO(str, lbl) \
 	do { \

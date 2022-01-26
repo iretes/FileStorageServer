@@ -12,7 +12,7 @@
 
 /* Chiave riconosciuta nel file di configurazione per il numero di thread workers */
 #define N_WORKERS_STR "n_workers"
-/* Chiave riconosciuta nel file di configurazione per la dimensione massima della coda di task pendenti del pool */           
+/* Chiave riconosciuta nel file di configurazione per la dimensione massima della coda di task pendenti del pool */
 #define DIM_WORKERS_QUEUE_STR "dim_workers_queue"
 /* Chiave riconosciuta nel file di configurazione per il massimo numero di file memorizzabili */
 #define MAX_FILE_NUM_STR "max_file_num"

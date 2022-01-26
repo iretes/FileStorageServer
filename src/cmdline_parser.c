@@ -19,7 +19,7 @@
 
 /**
  * @def             PRINT_NEEDS_ARG()
- * @brief           Stampa sullo stderr che l'opzione option necessita un argomento
+ * @brief           Stampa sullo stderr che l'opzione option necessita un argomento.
  * 
  * @param option    Il carattere che identifica l'opzione che necessita un argomento
  */
@@ -28,7 +28,7 @@
 
 /**
  * @def             PRINT_ONLY_ONCE()
- * @brief           Stampa sullo stderr che l'opzione option può essere specificata una sola volta
+ * @brief           Stampa sullo stderr che l'opzione option può essere specificata una sola volta.
  * 
  * @param option    Il carattere che identifica l'opzione che può essere specificata una sola volta
  */
@@ -37,7 +37,7 @@
 
 /**
  * @def             PRINT_NOT_A_NUMBER()
- * @brief           Stampa sullo stderr che l'argomento arg di un'opzione non è un numero valido
+ * @brief           Stampa sullo stderr che l'argomento arg di un'opzione non è un numero valido.
  * 
  * @param arg       L'argomento di un'opzione che non è un numero valido
  */
@@ -46,7 +46,7 @@
 
 /**
  * @def             PRINT_WRONG_ARG()
- * @brief           Stampa sullo stderr che l'argomento arg dell'opzione option non è valido
+ * @brief           Stampa sullo stderr che l'argomento arg dell'opzione option non è valido.
  * 
  * @param option    Il carattere che identifica l'opzione il cui argomento non è valido
  * @param arg       L'argomento non valido di un'opzione
@@ -56,7 +56,7 @@
 
 /**
  * @function        usage()
- * @brief           Stampa del messaggio di help del client
+ * @brief           Stampa del messaggio di help del client.
  * 
  * @param prog      Il nome del programma
  */

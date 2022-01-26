@@ -1,6 +1,6 @@
 /**
  * @file       hasht.c
- * @brief      Implementazione dell'interfaccia della tabella hash con liste di trabocco
+ * @brief      Implementazione dell'interfaccia della tabella hash con liste di trabocco.
  */
 
 #include <stdlib.h>
@@ -18,12 +18,12 @@
 
 /**
  * @function   string_compare()
- * @brief      Confronta due stringhe
+ * @brief      Confronta due stringhe.
  * 
  * @param a    prima stringa da confrontare
  * @param b    seconda stringa da confrontare
  *
- * @return     1 se le stringhe sono uguali, 0 altrimenti
+ * @return     1 se le stringhe sono uguali, 0 altrimenti.
  */
 static int string_compare(void* a, void* b) {
 	return (strcmp( (char*)a, (char*)b ) == 0);

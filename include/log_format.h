@@ -1,6 +1,6 @@
 /**
  * @file     log_format.h
- * @brief    Header per la definizione del formato del file di log
+ * @brief    Header per la definizione del formato del file di log.
  */
 
 #ifndef LOG_FORMAT_H

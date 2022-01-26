@@ -65,9 +65,20 @@
 
 /**
  * @def           RETM1
- * @brief         Ritorna -1
+ * @brief         Ritorna -1.
  */
 #define RETM1 return -1;
+
+/**
+ * @def           PERRFMT()
+ * @brief         Stampa con il formato fmt gli argomenti seguenti.
+ */
+#define PERRFMT(fmt, ...) \
+	do { \
+		int errnosv = errno; \
+		fprintf(stderr, fmt, __VA_ARGS__); \
+		errno = errnosv; \
+	} while (0)
 
 /**
  * @def           PERRORSTR()
@@ -487,7 +498,7 @@ int is_number(const char* s, long* n);
  * @return        0 in caso di successo,
  *                -1 in caso di fallimento con errno settato ad indicare l'errore.
  *                In caso di fallimento errno può assumere i seguenti valori:
- *                EINVAL se ms è <=
+ *                EINVAL se ms è <= 0
  * @note          Può fallire e settare errno se si verificano gli errori specificati da nanosleep().
  */
 int millisleep(const long ms);

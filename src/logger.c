@@ -1,6 +1,6 @@
 /**
  * @file     logger.c
- * @brief    Implementazione del logging delle operazioni
+ * @brief    Implementazione del logging delle operazioni.
  */
 
 #include <stdlib.h>

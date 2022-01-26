@@ -48,7 +48,7 @@
 			if (try >= MAX_REQ_TRIES) break; \
 			PRINT(" : %s", errno_to_str(errno)); \
 			if (millisleep(RETRY_REQ_AFTER_MSEC) == -1)  { \
-				fprintf(stderr, "\nERR: millisleep (%s)\n", strerror(errno)); \
+				PERRFMT("\nERR: millisleep (%s)\n", strerror(errno)); \
 				sleep_fail = 1; \
 				errno = EBUSY; \
 				break; \
@@ -67,7 +67,7 @@
  * @return                     True se il processo deve terminare l'esecuzione, false atrimenti.
  */
 static inline bool should_exit(int err) {
-	if (errno == ECONNRESET || errno == ECOMM || errno == EBUSY || errno == EBADRQC)
+	if (err == ECONNRESET || err == ECOMM || err == EBUSY || err == EBADRQC)
 		return true;
 	return false;
 }
@@ -90,11 +90,11 @@ static inline bool should_exit(int err) {
  *                             eventuali operazioni successive.
  */
 static int visit_dir(char* dirname, size_t limit, list_t* files) {
-	int r;
+	int r = 0;
 	// apro la directory dirname
 	DIR* dir = opendir(dirname);
 	if (!dir) {
-		fprintf(stderr, "\nERR: opendir di '%s' (%s)\n", dirname, strerror(errno));
+		PERRFMT("\nERR: opendir di '%s' (%s)\n", dirname, strerror(errno));
 		if (errno == ENOMEM)
 			return -1;
 		return -2;
@@ -114,12 +114,12 @@ static int visit_dir(char* dirname, size_t limit, list_t* files) {
 		int len1 = strlen(dirname);
 		int len2 = strlen(file->d_name);
 		if ((len1 + len2 + 2) > PATH_MAX) {
-			fprintf(stderr, "\nERR: il filepath '%s' è troppo lungo\n", file->d_name);
+			PERRFMT("\nERR: il filepath '%s' è troppo lungo\n", file->d_name);
 			continue;
 		}
 		char* pathname = NULL;
 		if ((pathname = calloc(len1 + len2 + 2, sizeof(char))) == NULL) {
-			fprintf(stderr, "\nERR: calloc (%s)\n", strerror(errno));
+			PERRFMT("\nERR: calloc (%s)\n", strerror(errno));
 			return -1;
 		}
 		strcpy(pathname, dirname);
@@ -130,7 +130,7 @@ static int visit_dir(char* dirname, size_t limit, list_t* files) {
 		// recupero i metadati del file corrente
 		struct stat statbuf;
 		if (stat(pathname, &statbuf) == -1) {
-			fprintf(stderr, "\nERR: stat di '%s' (%s)\n", pathname, strerror(errno));
+			PERRFMT("\nERR: stat di '%s' (%s)\n", pathname, strerror(errno));
 			free(pathname);
 			if (errno == ENOMEM)
 				return -1;
@@ -152,7 +152,7 @@ static int visit_dir(char* dirname, size_t limit, list_t* files) {
 				continue;
 			// inserisco il file corrente nella lista dei file visitati
 			if ((r = list_tail_insert(files, pathname)) != 0) {
-				fprintf(stderr, "\nERR: list_tail_insert (%s)\n", strerror(errno));
+				PERRFMT("\nERR: list_tail_insert (%s)\n", strerror(errno));
 				free(pathname);
 				return -1;
 			}
@@ -162,12 +162,12 @@ static int visit_dir(char* dirname, size_t limit, list_t* files) {
 	}
 	// controllo se la visita della directory è terminata con successo o se si è verificato un errore
 	if (!file && errno != 0) {
-		fprintf(stderr, "\nERR: readdir di '%s' (%s)\n", dirname, strerror(errno));
+		PERRFMT("\nERR: readdir di '%s' (%s)\n", dirname, strerror(errno));
 		r = -2;
 	}
 	// chiudo la directory
 	if (closedir(dir) == -1) {
-		fprintf(stderr, "\nERR: closedir di '%s' (%s)\n", dirname, strerror(errno));
+		PERRFMT("\nERR: closedir di '%s' (%s)\n", dirname, strerror(errno));
 		return -2;
 	}
 	if (r != -2)
@@ -188,7 +188,7 @@ static int visit_dir(char* dirname, size_t limit, list_t* files) {
  */
 static int write_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 	int ret, errnosv;
@@ -198,7 +198,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
+			PERRFMT("\nERR: get_absolute_path di '%s' (%s)\n", 
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -211,7 +211,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 
 		// invoco la funzione dell'API per scrivere il file 
@@ -221,7 +221,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 
 		// invoco la funzione dell'API per chiudere il file
@@ -231,7 +231,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 		free(abspath);
 	}
@@ -250,7 +250,7 @@ static int write_file_list(cmdline_operation_t* cmdline_operation) {
  */
 static int write_files_dir(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->dirname_in) {
-		fprintf(stderr, "\nERR: argomenti non validi per l'opzione -w\n");
+		PERRFMT("%s", "\nERR: argomenti non validi per l'opzione -w\n");
 		return 1;
 	}
 	if (cmdline_operation->n < 0)
@@ -259,14 +259,14 @@ static int write_files_dir(cmdline_operation_t* cmdline_operation) {
 	// inizializzo una lista in cui salvare i path dei file durante la visita della directory
 	cmdline_operation->files = list_create((int (*)(void*, void*))strcmp, free);
 	if (!cmdline_operation->files) {
-		fprintf(stderr, "\nERR: list_create (%s)\n", strerror(errno));
+		PERRFMT("\nERR: list_create (%s)\n", strerror(errno));
 		return -1;
 	}
-
+	// vistio la directory salvando i path dei file incontrati
 	int ret = visit_dir(cmdline_operation->dirname_in, cmdline_operation->n, cmdline_operation->files);
 	if (ret < 0) {
 		if (ret == -1) return -1;
-		else return 1;
+		return 1;
 	}
 	return write_file_list(cmdline_operation);
 }
@@ -283,14 +283,14 @@ static int write_files_dir(cmdline_operation_t* cmdline_operation) {
  */
 static int append_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files || !cmdline_operation->source_file) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 
 	// apro il file il cui contenuto deve essere scritto in append
 	FILE * file = fopen(cmdline_operation->source_file, "r+");
 	if (!file) {
-		fprintf(stderr, "\nERR: fopen di '%s' con modalità r+ (%s)\n",
+		PERRFMT("\nERR: fopen di '%s' con modalità r+ (%s)\n",
 			cmdline_operation->source_file, strerror(errno));
 		if (errno == ENOMEM) return -1;
 		return 1;
@@ -303,7 +303,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 	// leggo la dimensione del file
 	struct stat statbuf;
 	if (stat(cmdline_operation->source_file, &statbuf) == -1) {
-		fprintf(stderr, "\nERR: stat di '%s' (%s)\n",
+		PERRFMT("\nERR: stat di '%s' (%s)\n",
 				cmdline_operation->source_file, strerror(errno));
 		fail = true; 
 	}
@@ -311,7 +311,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		size += statbuf.st_size;
 		// controllo se è un file regolare
 		if (!S_ISREG(statbuf.st_mode)) {
-			fprintf(stderr, "\nERR: il file '%s' non è un file regolare\n",
+			PERRFMT("\nERR: il file '%s' non è un file regolare\n",
 				cmdline_operation->source_file);
 			fail = true; 
 		}
@@ -319,7 +319,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 			// alloco un buffer per la lettura del file
 			buf = malloc(size);
 			if (!buf) {
-				fprintf(stderr, "\nERR: malloc per la lettura del file '%s' (%s)\n",
+				PERRFMT("\nERR: malloc per la lettura del file '%s' (%s)\n",
 					cmdline_operation->source_file, strerror(errno));
 				fail = true;
 			}
@@ -328,21 +328,21 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 	if (size != 0 && !fail) {
 		// leggo il file
 		if (fread(buf, 1, size, file) != size) {
-			fprintf(stderr, "\nERR: fread di '%s' (%s)\n",
+			PERRFMT("\nERR: fread di '%s' (%s)\n",
 				cmdline_operation->source_file, strerror(errno));
 			fail = true;
 		}
 	}
 	// chiudo il file
 	if (fclose(file) == -1) {
-		fprintf(stderr, "\nERR: fclose di '%s' (%s)\n",
+		PERRFMT("\nERR: fclose di '%s' (%s)\n",
 			cmdline_operation->source_file, strerror(errno));
 	}
 	if (fail) {
 		if (buf)
 			free(buf);
 		if (errno == ENOMEM) return -1;
-		else return 1;
+		return 1;
 	}
 
 	int ret, errnosv;
@@ -352,7 +352,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n",
+			PERRFMT("\nERR: get_absolute_path di '%s' (%s)\n",
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -365,17 +365,17 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 
 		// invoco la funzione dell'API per effettuare l'operazione di append
 		PRINT("\nappendToFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(appendToFile(abspath, buf, size, cmdline_operation->dirname_out), ret);
 		if (ret == -1 && errno != EFAULT) { 
-			errnosv = errno;
-			free(abspath);
-			if (should_exit(errnosv)) return -1;
-			else continue;
+			if (should_exit(errno)) {
+				free(abspath);
+				return -1;
+			}
 		}
 
 		// invoco la funzione dell'API per chiudere il file
@@ -385,7 +385,7 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 		free(abspath);
 	}
@@ -406,18 +406,21 @@ static int append_file_list(cmdline_operation_t* cmdline_operation) {
  */
 static int read_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
+
+	int errnosv;
 
 	if (cmdline_operation->dirname_out) {
 		// creo, se non esiste, la directory in cui memorizzare i file letti dal server
 		if (mkdirr(cmdline_operation->dirname_out) == -1) {
-			fprintf(stderr, "\nERR: mkdirr di '%s' (%s), i file ricevuti non saranno scritti su disco\n",
+			PERRFMT("\nERR: mkdirr di '%s' (%s)\n", 
 				cmdline_operation->dirname_out, strerror(errno));
-			// se non è possibile creare la directory e l'errore è diverso da ENOMEM proseguo senza salvare i file
-			cmdline_operation->dirname_out = NULL;
 			if (errno == ENOMEM) return -1;
+			// se non è possibile creare la directory e l'errore è diverso da ENOMEM proseguo senza salvare i file
+			PERRFMT("%s", "I file ricevuti non saranno scritti su disco\n");
+			cmdline_operation->dirname_out = NULL;
 		}
 	}
 
@@ -427,21 +430,21 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n",
+			PERRFMT("\nERR: get_absolute_path di '%s' (%s)\n",
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
 		}
 
 		// invoco la funzione dell'API per aprire il file
-		int ret, errnosv;
+		int ret;
 		PRINT("\nopenFile(pathname = %s, flags = 0)", abspath);
 		RETRY_IF_BUSY(openFile(abspath, 0), ret);
 		if (ret == -1 && errno != EALREADY) { 
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 
 		// invoco la funzione dell'API per leggere il file
@@ -450,49 +453,46 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 		PRINT("\nreadFile(pathname = %s)", abspath);
 		RETRY_IF_BUSY(readFile(abspath, &buf, &size), ret);
 		if (ret == -1) { 
-			errnosv = errno;
-			free(abspath);
-			if (should_exit(errnosv)) return -1;
-			else continue;
+			if (should_exit(errno)) {
+				free(abspath);
+				return -1;
+			}
+			buf = NULL;
 		}
 
-		if (cmdline_operation->dirname_out && size != 0) {
+		if (ret != -1 && cmdline_operation->dirname_out && size != 0) {
 			// ottengo il nome del file letto
 			char* filename = get_basename(abspath);
 			if (!filename) {
 				if (errno == ENOMEM) return -1;
-				else continue;
+				continue;
 			}
 			// costruisco il path del file letto per poterlo memorizzare nella directory cmdline_operation->dirname_out
 			char* new_filepath = build_notexisting_path(cmdline_operation->dirname_out, filename);
-			if (!new_filepath) {
-				if (errno == ENOMEM) return -1;
-				else continue;
-			}
 			if (new_filepath) {
 				// creo il file
 				FILE * file = fopen(new_filepath, "w+");
 				if (file) {
 					// scrivo nel file
 					if (fwrite(buf, 1, size, file) != size) {
-						fprintf(stderr, "\nERR: fwrite '%s' (%s)\n",
+						PERRFMT("\nERR: fwrite '%s' (%s)\n",
 							new_filepath, strerror(errno));
 					}
 					// chiudo il file
 					if (fclose(file) == -1) {
-						fprintf(stderr, "\nERR: fclose '%s' (%s)\n",
+						PERRFMT("\nERR: fclose '%s' (%s)\n",
 							new_filepath, strerror(errno));
 					}
 					PRINT(" (%zu bytes salvati in %s)", size, new_filepath);
 				}
 				else {
-					fprintf(stderr, "\nERR: fopen di '%s' con modalità w+ (%s)\n",
+					PERRFMT("\nERR: fopen di '%s' con modalità w+ (%s)\n",
 						new_filepath, strerror(errno));
 				}
 				free(new_filepath);
 			}
 			else {
-				fprintf(stderr, "\nERR: build_notexisting_path per scrivere il file '%s' in '%s' (%s)\n",
+				PERRFMT("\nERR: build_notexisting_path per scrivere il file '%s' in '%s' (%s)\n",
 					filename, cmdline_operation->dirname_out, strerror(errno));
 			}
 			free(filename);
@@ -509,7 +509,7 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 		free(abspath);
 	}
@@ -528,13 +528,13 @@ static int read_file_list(cmdline_operation_t* cmdline_operation) {
  */
 int read_n_files(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 	if (cmdline_operation->dirname_out) {
 		// creo, se non esiste, la directory in cui memorizzare i file letti dal server
 		if (mkdirr(cmdline_operation->dirname_out) == -1) {
-			fprintf(stderr, "\nERR: mkdirr di '%s' (%s), i file ricevuti non saranno scritti su disco\n", 
+			PERRFMT("\nERR: mkdirr di '%s' (%s), i file ricevuti non saranno scritti su disco\n", 
 				cmdline_operation->dirname_out, strerror(errno));
 			cmdline_operation->dirname_out = NULL;
 			if (errno == ENOMEM) return -1;
@@ -547,7 +547,7 @@ int read_n_files(cmdline_operation_t* cmdline_operation) {
 	RETRY_IF_BUSY(readNFiles(cmdline_operation->n, cmdline_operation->dirname_out), ret);
 	if (ret == -1) { 
 		if (should_exit(errno)) return -1;
-		else return 1;
+		return 1;
 	}
 	PRINT(" (%d file ricevuti)", ret);
 	return 0;
@@ -565,7 +565,7 @@ int read_n_files(cmdline_operation_t* cmdline_operation) {
  */
 int lock_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 
@@ -575,7 +575,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
+			PERRFMT("\nERR: get_absolute_path di '%s' (%s)\n", 
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -589,7 +589,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 
 		// invoco la funzione dell'API per acquisire la lock sul file
@@ -599,7 +599,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 		free(abspath);
 	}
@@ -618,7 +618,7 @@ int lock_file_list(cmdline_operation_t* cmdline_operation) {
  */
 int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 	
@@ -628,7 +628,7 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
+			PERRFMT("\nERR: get_absolute_path di '%s' (%s)\n", 
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -642,7 +642,7 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 		free(abspath);
 	}
@@ -661,7 +661,7 @@ int unlock_file_list(cmdline_operation_t* cmdline_operation) {
  */
 int remove_file_list(cmdline_operation_t* cmdline_operation) {
 	if (!cmdline_operation || !cmdline_operation->files) {
-		fprintf(stderr, "\nERR: argomenti non validi nella funzione '%s'\n", __func__);
+		PERRFMT("\nERR: argomenti non validi nella funzione '%s'\n", __func__);
 		return 1;
 	}
 	
@@ -671,7 +671,7 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 		// ottengo il path assoluto del file
 		char* abspath = get_absolute_path(filepath);
 		if (!abspath) {
-			fprintf(stderr, "\nERR: get_absolute_path di '%s' (%s)\n", 
+			PERRFMT("\nERR: get_absolute_path di '%s' (%s)\n", 
 				filepath, strerror(errno));
 			if (errno == ENOMEM) return -1;
 			continue;
@@ -689,14 +689,14 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 				errnosv = errno;
 				free(abspath);
 				if (should_exit(errnosv)) return -1;
-				else continue;
+				continue;
 			}
 		}
 		else if (ret == -1) { 
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 
 		// invoco la funzione dell'API per rimuovere il file
@@ -706,7 +706,7 @@ int remove_file_list(cmdline_operation_t* cmdline_operation) {
 			errnosv = errno;
 			free(abspath);
 			if (should_exit(errnosv)) return -1;
-			else continue;
+			continue;
 		}
 		free(abspath);
 	}
@@ -718,7 +718,7 @@ int main(int argc, char* argv[]) {
 	int extval = EXIT_SUCCESS;
 
 	if (argc == 1) {
-		fprintf(stderr, "ERR: %s necessita almeno un argomento, usa -h per maggiori informazioni\n", argv[0]);
+		PERRFMT("ERR: %s necessita almeno un argomento, usa -h per maggiori informazioni\n", argv[0]);
 		extval = EXIT_FAILURE;
 		goto exit;
 	}
@@ -735,7 +735,7 @@ int main(int argc, char* argv[]) {
 		goto exit;
 	}
 	if (list_is_empty(cmdline_operation_list)) {
-		fprintf(stderr, "ERR: %s non ha argomenti, usa -h per maggiori informazioni\n", argv[0]);
+		PERRFMT("ERR: %s non ha argomenti, usa -h per maggiori informazioni\n", argv[0]);
 		extval = EXIT_FAILURE;
 		goto exit;
 	}
@@ -752,12 +752,12 @@ int main(int argc, char* argv[]) {
 		printf("================================================\n");
 	}
 
-	// maschero SIGPIPE
+	// ignoro SIGPIPE
 	struct sigaction s;
 	memset(&s, '0', sizeof(struct sigaction));
 	s.sa_handler = SIG_IGN;
 	if (sigaction(SIGPIPE, &s, NULL) == -1) {
-		fprintf(stderr, "ERR: sigaction (%s)\n", strerror(errno));
+		PERRFMT("ERR: sigaction (%s)\n", strerror(errno));
 		extval = EXIT_FAILURE;
 		goto exit;
 	}
@@ -765,7 +765,7 @@ int main(int argc, char* argv[]) {
 	// ottengo il tempo corrente e calcolo il tempo assoluto necessario per la funzione dell'API openConnection()
 	time_t curr_time = time(NULL);
 	if (curr_time == -1) {
-		fprintf(stderr, "ERR: time (%s)\n", strerror(errno));
+		PERRFMT("ERR: time (%s)\n", strerror(errno));
 		extval = EXIT_FAILURE;
 		goto exit;
 	}
@@ -816,7 +816,7 @@ int main(int argc, char* argv[]) {
 		   richiesta successiva */
 		if (cmdline_operation->time > 0) {
 			if (millisleep(cmdline_operation->time) == -1) {
-				fprintf(stderr, "\nERR: millisleep (%s)\n", strerror(errno));
+				PERRFMT("\nERR: millisleep (%s)\n", strerror(errno));
 			}
 		}
 		errno = 0;

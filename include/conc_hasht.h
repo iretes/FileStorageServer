@@ -239,7 +239,7 @@ int conc_hasht_atomic_delete(conc_hasht_t *cht, void* key, void (*free_key)(void
  *                            valore associato alla chiave.
  *                            Se free_key è diversa da @c NULL utilizza tale funzione per deallocare la chiave uguale a key.
  * @warning                   L'accesso alla tabella non è thread safe, per questo si raccomanda di invocare la funzione 
- *                            dopo aver invocato conc_hasht_lock() con cht e key come parametri.  
+ *                            dopo aver invocato conc_hasht_lock() con cht e key come parametri.
  * 
  * @param cht                 Oggetto che rappresenta la tabella hash thread safe
  * @param key                 Chiave che si intende eliminare

@@ -31,7 +31,7 @@
 
 /**
  * @struct               task_args_t
- * @brief                Struttura che raccoglie gli argomenti di un task che un worker dovrà servire
+ * @brief                Struttura che raccoglie gli argomenti di un task che un worker dovrà servire.
  * 
  * @var storage          Struttura storage
  * @var master_fd        Descrittore per la comunicazione con il master
@@ -45,7 +45,7 @@ typedef struct task_args {
 
 /**
  * @function             task_handler()
- * @brief                Funzione eseguita dai worker thread per servire le richieste dei clienti
+ * @brief                Funzione eseguita dai worker thread per servire le richieste dei clienti.
  * 
  * @param arg            Argomenti del task
  * @param worker_id      Identificativo del worker thread che gestisce la richiesta
@@ -156,7 +156,7 @@ static void task_handler(void *arg, int worker_id) {
 
 /**
  * @struct               sighandler_args_t
- * @brief                Struttura contenente le informazioni da passare al signal handler thread
+ * @brief                Struttura contenente le informazioni da passare al signal handler thread.
  *
  * @var set              Insieme dei segnali da gestire
  * @var signal_fd        Descrittore per la comunicazione dei segnali al main thread
@@ -174,7 +174,7 @@ typedef struct sighandler_args {
 
 /**
  * @function             sig_handler()
- * @breif                Funzione eseguita dal signal handler thread
+ * @breif                Funzione eseguita dal signal handler thread.
  * 
  * @param arg            Argomenti della funzione
  */
@@ -218,12 +218,12 @@ static void *sig_handler(void *arg) {
 
 /**
  * @function             is_flag_setted()
- * @brief                Permette di stabilire se flag è settato a true accedendovi in mutua esclusione con mutex
+ * @brief                Permette di stabilire se flag è settato a true accedendovi in mutua esclusione con mutex.
  * 
  * @param mutex          Mutex per l'accesso in mutua esclusione a flag
  * @param flag           Il flag da controllare
  * 
- * @return               true se flag è true, false altrimenti
+ * @return               true se flag è true, false altrimenti.
  */
 static inline bool is_flag_setted(pthread_mutex_t mutex, bool flag) {
 	int r;
@@ -236,7 +236,7 @@ static inline bool is_flag_setted(pthread_mutex_t mutex, bool flag) {
 
 /**
  * @function             set_flag()
- * @brief                Setta a true flag accedendovi in mutua esclusione
+ * @brief                Setta a true flag accedendovi in mutua esclusione.
  * 
  * @param mutex          Mutex per l'accesso in mutua esclusione a flag
  * @param flag           Il flag da settare
@@ -250,12 +250,12 @@ static inline void set_flag(pthread_mutex_t mutex, bool* flag) {
 
 /**
  * @function             get_max_fd()
- * @brief                Ritorna il descrittore di indice massimo tra i descrittori attivi
+ * @brief                Ritorna il descrittore di indice massimo tra i descrittori attivi.
  * 
  * @param set            Set dei descrittori attivi
  * @param fdmax          Indice del massimo descrittore attuale
  * 
- * @return               Indice del massimo descrittore attivo
+ * @return               Indice del massimo descrittore attivo.
  */
 static int get_max_fd(fd_set set, int fdmax) {
 	for (int i = (fdmax-1); i >= 0; -- i) {

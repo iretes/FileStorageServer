@@ -43,7 +43,7 @@ typedef struct cmdline_operation {
  *                             NULL in caso di fallimento ed errno settato ad indicare l'errore.
  *                             In caso di fallimento errno può assumere i seguenti valori:
  *                             EINVAL  Se operation non assume uno dei seguenti valori w | W | a | r | R | l | u | c
- * @note                       Può fallire e settare errno se si verificano gli errori specificati da malloc()
+ * @note                       Può fallire e settare errno se si verificano gli errori specificati da malloc().
  */
 cmdline_operation_t* cmdline_operation_create(char operation);
 

@@ -13,7 +13,7 @@
 
 /**
  * @function    workerpool_thread
- * @brief       Funzione eseguita dal thread worker che appartiene al pool
+ * @brief       Funzione eseguita dal thread worker che appartiene al pool.
  */
 static void *workerpool_thread(void *arguments) {
 	worker_args_t* args = (worker_args_t *)arguments;
