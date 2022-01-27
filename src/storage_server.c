@@ -350,11 +350,9 @@ static evicted_file_t* init_evicted_file(file_t* file) {
 
 	evicted_file->content_size = file->content_size;
 	evicted_file->content = file->content;
-	// setto a NULL il campo content di file per evitare che venga deallocato più volte
 	file->content = NULL;
 
 	evicted_file->pending_lock_fds = file->pending_lock_fds;
-	// setto a NULL il campo pending_locks di file per evitare che venga deallocato più volte
 	file->pending_lock_fds = NULL;
 
 	return evicted_file;
@@ -1218,6 +1216,7 @@ int open_file_handler(storage_t* storage,
 			char* filepath_needed = NULL;
 			if (mode == OPEN_LOCK || mode == OPEN_NO_FLAGS)
 				filepath_needed = file_path;
+			// invoco l'algoritmo di sostituzione
 			evicted_file = evict_file(storage, filepath_needed);
 
 			// controllo se è stato possibile espellere il file
@@ -1475,6 +1474,7 @@ int write_file_handler(storage_t* storage,
 	}
 
 	while (storage->curr_bytes + content_size > storage->max_bytes) {
+		// invoco l'algoritmo di sostituzione
 		evicted_file_t* evicted_file = evict_file(storage, file_path);
 		// controllo se è stato possibile espellere il file
 		if (evicted_file == NULL) {

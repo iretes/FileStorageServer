@@ -29,6 +29,8 @@ logger_t* logger_create(char* log_file_path, char* init_line) {
 	// apro il file di log
 	logger->file = fopen(log_file_path, "w");
 	if (logger->file == NULL) {
+		fprintf(stderr, "ERR: Errore nell'apertura in modalità write del file '%s' (errno %d)\n", 
+			log_file_path, errno);
 		free(logger);
 		return NULL;
 	}
@@ -54,7 +56,7 @@ int log_record(logger_t* logger, const char* message_fmt, ...) {
 		return -1;
 	}
 	int r;
-	// Formatto il tempo corrente
+	// formatto il tempo corrente
 	time_t curr_time;
 	struct tm time_info;
 	EQM1(time(&curr_time), r);
@@ -68,22 +70,25 @@ int log_record(logger_t* logger, const char* message_fmt, ...) {
 	if (strftime(time_str, sizeof(time_str), "%d-%m-%Y %H:%M:%S", &time_info) != TIME_STR_SIZE-1)
 		return -1;
 
-	// Costruisco il record da scrivere sul log
 	char record_buffer[RECORD_SIZE];
 	va_list args;
-	va_start(args, message_fmt);
-	if (vsprintf(record_buffer, message_fmt, args) < 0)
-		return -1;
-	va_end(args);
 
-	// Scrivo sul log il record accedendovi in mutua esclusione
 	NEQ0(pthread_mutex_lock(&logger->mutex), r);
 	if (r != 0) {
 		errno = r;
 		return -1;
 	}
+
+	// costruisco il record da scrivere sul log
+	va_start(args, message_fmt);
+	if (vsprintf(record_buffer, message_fmt, args) < 0)
+		return -1;
+	va_end(args);
+
+	// scrivo sul file di log il record
 	fprintf(logger->file, "%s,%s\n", time_str, record_buffer);
 	fflush(logger->file);
+
 	NEQ0(pthread_mutex_unlock(&logger->mutex), r);
 	if (r != 0) {
 		errno = r;

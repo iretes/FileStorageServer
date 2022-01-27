@@ -287,7 +287,7 @@ list_t* cmdline_parser(int argc, char* argv[], char** socket_path) {
 					goto cmdline_parser_exit;
 				}
 				// aggiungo alla lista di file i tokens
-				file = strtok(optarg, ","); 
+				file = strtok(optarg, ",");
 				char* cpy = NULL;
 				while (file != NULL) {
 					size_t len = strlen(file)+1;

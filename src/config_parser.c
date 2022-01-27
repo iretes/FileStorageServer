@@ -307,7 +307,7 @@ int config_parser(config_t *config, char* filepath) {
 			evpolicy_found = true;
 		}
 		else {
-			fprintf(stderr, "ERR: '%s' non riconosciuto\n", param);
+			fprintf(stderr, "ERR: chiave '%s' non riconosciuta\n", param);
 			goto config_parser_exit;
 		}
 		memset(buf, 0, CONFIG_LINE_SIZE);

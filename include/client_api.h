@@ -13,13 +13,6 @@
 
 #include <protocol.h>
 
-/* File descriptor associato al socket */
-int g_socket_fd;
-/* Path del socket file */
-char g_sockname[UNIX_PATH_MAX];
-/* Flag che indica se le stampe sullo stdout sono abilitate */
-bool print_enable;
-
 /* Flag per l'apertura di un file con modalità "create" */
 #define O_CREATE 01
 /* Flag per l'apertura di un file con modalità "lock" */

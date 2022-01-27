@@ -720,7 +720,7 @@ int main(int argc, char* argv[]) {
 		goto exit;
 	}
 	if (list_is_empty(cmdline_operation_list)) {
-		PERRFMT("ERR: %s non ha argomenti, usa -h per maggiori informazioni\n", argv[0]);
+		PERRFMT("%s", "ERR: non è stata richiesta nessuna operazione, usa -h per maggiori informazioni\n");
 		extval = EXIT_FAILURE;
 		goto exit;
 	}
