@@ -1,0 +1,45 @@
+# Questo è un commento (linea che inizia con '#').
+# Le linee vuote o che presentano solo caratteri di spaziatura verrano anch'esse ignorate.
+# Le linee possono essere al più lunghe 1024 caratteri.
+# Una linea può contenere una coppia chiave-valore, separati da '=' e terminante con ';'.
+# Sono ammessi caratteri di spaziatura solo dopo ';'.
+# Una chiave può essere specificata una sola volta.
+# Se una chiave non viene specificata verranno utilizzati i valori di default.
+
+# Di seguito le chiavi ammissibili (non è necessario che siano specificate in questo ordine):
+
+# Numero di thread workers
+# (n intero, n > 0, se non specificato = 4)
+n_workers=n;
+
+# Dimensione della coda di task pendenti nel thread pool
+# (n intero, 0 < n <= 18446744073709551615, se non specificato = 18446744073709551615)
+dim_workers_queue=n;
+
+# Numero massimo di file che possono essere memorizzati nello storage
+# (n intero, 0 < n <= 18446744073709551615, se non specificato = 10)
+max_file_num=n;
+
+# Numero massimo di bytes che possono essere memorizzati nello storage
+# (n intero, 0 < n <= 18446744073709551615, se non specificato = 1000000)
+max_bytes=n;
+
+# Numero massimo di lock che possono essere associate ai files
+# (n intero, 0 < n <= 18446744073709551615, se non specificato = 100)
+max_locks=n;
+
+# Numero atteso di client contemporaneamente connessi
+# (n intero, 0 < n <= 18446744073709551615, se non specificato = 10)
+expected_clients=n;
+
+# Path della socket per la connessione con i client
+# (se non specificato = ./storage_socket)
+socket_file_path=path;
+
+# Path del file di log
+# (ad ogni esecuzione se già esiste viene sovrascritto, se non specificato = ./log.csv)
+log_file_path=path;
+
+# Politica di espulsione dei file
+# (policy può assumere uno tra i seguenti valori FIFO|LRU|LFU|LW, se non specificato = FIFO)
+eviction_policy=policy;
