@@ -1,0 +1,19 @@
+# Per i parametri non specificati verranno utilizzati i valori di default (visualizzabili eseguendo il server con l'opzione -h)
+
+# Numero di thread workers
+n_workers=8;
+
+# Numero massimo di file che possono essere memorizzati nello storage
+max_file_num=100;
+
+# Numero massimo di bytes che possono essere memorizzati nello storage
+max_bytes=32000000;
+
+# Path del file di log per makefile
+log_file_path=test/test3/output/log.csv;
+
+# Path socket makefile
+socket_file_path=test/test3/output/storage_socket;
+
+# Politica di espulsione dei file
+eviction_policy=LW;
