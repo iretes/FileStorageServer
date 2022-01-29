@@ -149,7 +149,7 @@ int hasht_insert(hasht_t *ht, void* key, void *value) {
 
 	curr->key = key;
 	curr->value = value;
-	curr->next = ht->buckets[hash_val]; // aggiungo in testo alla lista di trabocco
+	curr->next = ht->buckets[hash_val]; // aggiungo in testa alla lista di trabocco
 
 	ht->buckets[hash_val] = curr;
 	ht->nentries++;

@@ -112,7 +112,7 @@ int conc_hasht_atomic_contains(conc_hasht_t *cht, void* key);
  *                            In caso di fallimento errno può assumere i seguenti valori:
  *                            EINVAL se cht è @c NULL o key è @c NULL 
  * @note                      Può fallire e settare errno se si verificano gli errori specificati da 
- *                            pthread_mutex_lock() in tal caso errno viene settato con il valore che pthread_mutex_lock() 
+ *                            pthread_mutex_lock(), in tal caso errno viene settato con il valore che pthread_mutex_lock() 
  *                            ritorna.
  */
 int conc_hasht_lock(conc_hasht_t* cht, void* key);
@@ -127,7 +127,7 @@ int conc_hasht_lock(conc_hasht_t* cht, void* key);
  * @return                    0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                            In caso di fallimento errno può assumere i seguenti valori:
  *                            EINVAL se cht è @c NULL o key è @c NULL 
- * @note                      Può fallire e settare errno se si verificano gli errori specificati da pthread_mutex_unlock() 
+ * @note                      Può fallire e settare errno se si verificano gli errori specificati da pthread_mutex_unlock(), 
  *                            in tal caso errno viene settato con il valore che pthread_mutex_unlock() ritorna.
  */
 int conc_hasht_unlock(conc_hasht_t* cht, void* key);

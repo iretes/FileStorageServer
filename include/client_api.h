@@ -90,7 +90,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
  * @return            0 in caso di successo, -1 in caso di fallimento ed errno settato ad indicare l'errore.
  *                    In caso di fallimento errno può assumere i seguenti valori:
  *                    EALREADY     se la connessione non era stata aperta
- *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile effetuare 
+ *                    ECOMM        se si sono verificati errori lato client che non hanno reso possibile effettuare 
  *                                 l'operazione
  *                    EINVAL       se sockname è @c NULL o la sua lunghezza è 0
  */
@@ -268,7 +268,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 /**
  * @function          lockFile()
  * @brief             In caso di successo setta il flag O_LOCK al file. Se il file era stato aperto/creato dal client 
- *                    con il flag O_LOCK e la, oppure se il file non ha il flag O_LOCK settato, l’operazione termina
+ *                    con il flag O_LOCK, oppure se il file non ha il flag O_LOCK settato, l’operazione termina
  *                    immediatamente con successo, altrimenti l’operazione non viene completata fino a quando il flag O_LOCK 
  *                    non viene resettato dal client detentore della lock. Le lock vengono acquisite dai client secondo la 
  *                    politica FIFO.

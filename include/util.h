@@ -146,7 +146,7 @@
 
 /**
  * @def           LOCK_DO()
- * @brief         Esegue pthread_mutex_lock() sulla mutex l, salva il valore ritornato in r, e in caso di errore stampa 
+ * @brief         Esegue pthread_mutex_lock() sulla mutex l, salva il valore ritornato in r e in caso di errore stampa 
  *                l'errore ed esegue y.
  * 
  * @param l       Riferimento alla mutex
@@ -163,7 +163,7 @@
 
 /**
  * @def           LOCK()
- * @brief         Esegue pthread_mutex_lock() sulla mutex l, salva il valore ritornato in r, e in caso di errore stampa 
+ * @brief         Esegue pthread_mutex_lock() sulla mutex l, salva il valore ritornato in r e in caso di errore stampa 
  *                l'errore.
  * 
  * @param l       Riferimento alla mutex
@@ -178,7 +178,7 @@
 
 /**
  * @def           UNLOCK_DO()
- * @brief         Esegue pthread_mutex_unlock() sulla mutex l, salva il valore ritornato in r, e in caso di errore stampa 
+ * @brief         Esegue pthread_mutex_unlock() sulla mutex l, salva il valore ritornato in r e in caso di errore stampa 
  *                l'errore ed esegue y.
  * 
  * @param l       Riferimento alla mutex
@@ -195,7 +195,7 @@
 
 /**
  * @def           UNLOCK()
- * @brief         Esegue pthread_mutex_unlock() sulla mutex l, salva il valore ritornato in r, e in caso di errore stampa 
+ * @brief         Esegue pthread_mutex_unlock() sulla mutex l, salva il valore ritornato in r e in caso di errore stampa 
  *                l'errore.
  * 
  * @param l       Riferimento alla mutex
@@ -210,7 +210,7 @@
 
 /**
  * @def           WAIT_DO()
- * @brief         Esegue pthread_cond_wait() sulla variabile di condizione c e la mutex l, salva il valore ritornato in r, 
+ * @brief         Esegue pthread_cond_wait() sulla variabile di condizione c e la mutex l, salva il valore ritornato in r
  *                e in caso di errore stampa l'errore ed esegue l'istruzione y.
  *
  * @param c       Riferimento alla variabile di condizione
@@ -228,7 +228,7 @@
 
 /**
  * @def           WAIT()
- * @brief         Esegue pthread_cond_wait() sulla variabile di condizione c e la mutex l, salva il valore ritornato in r, 
+ * @brief         Esegue pthread_cond_wait() sulla variabile di condizione c e la mutex l, salva il valore ritornato in r
  *                e in caso di errore stampa l'errore.
  *
  * @param c       Riferimento alla variabile di condizione
@@ -244,7 +244,7 @@
 
 /**
  * @def           BCAST_DO()
- * @brief         Esegue pthread_cond_broadcast() sulla variabile di condizione c, salva il valore ritornato in r, e in caso 
+ * @brief         Esegue pthread_cond_broadcast() sulla variabile di condizione c, salva il valore ritornato in r e in caso 
  *                di errore stampa l'errore ed esegue l'istruzione y.
  *
  * @param c       Riferimento alla variabile di condizione
@@ -474,7 +474,7 @@ int writen(long fd, void *buf, size_t size);
 
 /**
  * @function      is_number()
- * @brief         Connverte s in un numero salvando il risultato in n.
+ * @brief         Converte s in un numero salvando il risultato in n.
  * 
  * @param s       La stringa che rappresenta un numero
  * @param n       Il numero prodotto dalla conversione della stringa

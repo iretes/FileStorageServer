@@ -101,7 +101,7 @@ void* hasht_get_value(hasht_t* ht, void* key);
 
 /**
  * @function                  hasht_insert()
- * @brief                     Inserisce la coppia la chiave key e il valore value nella tabella se key non è già presente.
+ * @brief                     Inserisce la coppia con chiave key e valore value nella tabella se key non è già presente.
  * 
  * @param ht                  Oggetto che rappresenta la tabella hash
  * @param key                 Chiave che si intende inserire nella tabella

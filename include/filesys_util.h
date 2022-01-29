@@ -37,7 +37,7 @@ char* get_absolute_path(const char* file_name);
  * 
  * @param path         Path del file
  * 
- * @return             Una stringa che rappresenta il nome del file in casod di successo, 
+ * @return             Una stringa che rappresenta il nome del file in caso di successo, 
  *                     NULL in caso di fallimento ed errno settato a segnalare l'errore.
  *                     In caso di fallimento errno può assumere i seguenti valori:
  *                     EINVAL se path è @c NULL
@@ -62,7 +62,7 @@ char* get_basename(const char* path);
  *                     In caso di fallimento errno può assumere i seguenti valori:
  *                     EINVAL se dir_name o file_name sono @c NULL o hanno lunghezza 0
  *                     ENAMETOOLONG se il path risultante è troppo lungo
- *                     EFAULT se si sono verifiati errori durante la costruzione del path
+ *                     EFAULT se si sono verificati errori durante la costruzione del path
  * @note               Può fallire e settare errno se si verificano gli errori specificati da get_absolute_path(), 
  *                     calloc(), open(), close().
  */
@@ -88,8 +88,8 @@ int mkdirr(char const *path);
  * 
  * @param path         Il path del file
  * 
- * @return             1 in caso di successo e se path è uguale a "." p "..", 
- *                     0 in caso di successo e se path non è uguale a "." p "..", 
+ * @return             1 in caso di successo e se path è uguale a "." o "..", 
+ *                     0 in caso di successo e se path non è uguale a "." o "..", 
  *                     -1 in caso di fallimento con errno settato ad indicare l'errore.
  *                     In caso di fallimento errno può assumere i seguenti valori:
  *                     EINVAL se path è @c NULL

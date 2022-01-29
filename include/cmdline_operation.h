@@ -1,6 +1,6 @@
 /**
 * @file                        cmdline_operation.h
-* @brief                       Inerfaccia per le funzioni sulla struttura che rappresenta un'operazione specificata della 
+* @brief                       Interfaccia per le funzioni sulla struttura che rappresenta un'operazione specificata dalla 
                                linea di comando del client.
 */
 
@@ -11,16 +11,16 @@
 
 /**
  * @struct                     cmdline_operation_t
- * @brief                      Struttura che rappresenta un'operazione specificata della linea di comando del client.
+ * @brief                      Struttura che rappresenta un'operazione specificata dalla linea di comando del client.
  *
  * @var operation              Operazione richiesta (uno tra i seguenti valori w | W | a | r | R | l | u | c)
  * @var files                  Lista di file su cui è stata richiesta l'operazione (non nulla se l'operazione è 
  *                             -W, -r, -l, -u, -c)
  * @var dirname_in             Directory da cui leggere i file (non nulla se l'operazione è -w)
- * @var dirname_out            Directory in cui memorizzare i file (non nulla se l'operazione è -D o -d)
+ * @var dirname_out            Directory in cui memorizzare i file (non nulla se è stata specificata -D o -d)
  * @var source_file            File da cui leggere il contenuto per una richiesta di append (non nulla se l'operazione è -a)
  * @var time                   Tempo da attendere in millisecondi dopo la ricezione della risposta (significativo se 
- *                             l'operazione è -t)
+ *                             è stata specificata -t)
  * @var n                      Valore del parametro n (significativo se l'operazione è -w o -R)
  */
 typedef struct cmdline_operation {
@@ -51,7 +51,7 @@ cmdline_operation_t* cmdline_operation_create(char operation);
 /**
  * @function                   cmdline_operation_destroy()
  * @brief                      Dealloca il puntatore alla struttura che rappresenta un'operazione specificata dalla linea di
- *                             comando del client, deallocando la memoria.
+ *                             comando del client.
  *
  * @param cmdline_operation    Il puntatore all'operazione da distruggere
 */

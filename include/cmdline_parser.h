@@ -1,6 +1,6 @@
 /**
  * @file                cmdline_parser.h
- * @brief               Intefaccia per il parsing degli argomenti della linea di comando del client.
+ * @brief               Interfaccia per il parsing degli argomenti della linea di comando del client.
  */
 
 #ifndef CMDLINE_PARSER_H

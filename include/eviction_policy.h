@@ -6,7 +6,7 @@
 #ifndef EVICTION_POLICY_H
 #define EVICTION_POLICY_H
 
-/* Fattore per il ridimensionamento dei contatori del numero di utilizzi di un file nel caso in cui venga raggiunto da uno 
+/* Fattore per il ridimensionamento dei contatori del numero di utilizzi dei file nel caso in cui venga raggiunto da uno 
    di essi il valore massimo*/
 #define RESIZE_OVERFLOW_FACTOR  0.5
 
@@ -33,7 +33,7 @@ typedef enum eviction_policy {
  * @param policy    Politica di espulsione
  * 
  * @return          Una stringa che rappresenta la politica di espulsione in caso di successo,
- *                  NULL in caso di fallimento se la policy non è una politica di espulsione valida.
+ *                  NULL in caso di fallimento se policy non è una politica di espulsione valida.
  */
 char* eviction_policy_to_str(eviction_policy_t policy);
 

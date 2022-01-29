@@ -74,7 +74,7 @@ void storage_destroy(storage_t* storage);
 
 /**
  * @function              new_connection_handler()
- * @brief                 Registra nello storage il nuovo cliente connesso.
+ * @brief                 Registra nello storage il nuovo client connesso.
  * 
  * @param storage         Struttura storage
  * @param client_fd       Descrittore del nuovo client connesso
@@ -82,26 +82,26 @@ void storage_destroy(storage_t* storage);
  * @return                0 in caso di successo, -1 in caso di fallimento con errno settato ad indicare l'errore.
  *                        In caso di fallimento errno può assumere i seguenti valori:
  *                        EINVAL se storage è @c NULL o client_fd è negativo
- *                        EALREADY se client_fd è il descrittore di un cliente già connesso
+ *                        EALREADY se client_fd è il descrittore di un client già connesso
  */
 int new_connection_handler(storage_t* storage,
 				int client_fd);
 
 /**
  * @function              read_request()
- * @brief                 Legge la richiesta del cliente associato al descrittore client_fd.
+ * @brief                 Legge la richiesta del client associato al descrittore client_fd.
  * 
  * @param storage         Struttura storage
  * @param master_fd       Descrittore del master thread per la comunicazione tra master e workers
- * @param client_fd       Descrittore del cliente che ha effettuato la richiesta
+ * @param client_fd       Descrittore del client che ha effettuato la richiesta
  * @param worker_id       Identificativo del worker che gestisce la richiesta
  * 
  * @return                Un puntatore a una struttura request_t che raccoglie gli argomenti della richiesta in caso di 
  *                        successo, NULL in caso di fallimento con errno settato ad indicare l'errore.
  *                        In caso di fallimento errno può assumere i seguenti valori:
  *                        EINVAL se storage è @c NULL o client_fd è negativo
- *                        ECOMM se la richiesta ricevuta dal cliente non rispetta il protocollo o è stato riscontrato 
- *                        che il cliente si è disconesso
+ *                        ECOMM se la richiesta ricevuta dal client non rispetta il protocollo o è stato riscontrato 
+ *                        che il client si è disconesso
  */
 request_t* read_request(storage_t* storage,
 				int master_fd,
@@ -225,7 +225,7 @@ int readn_file_handler(storage_t* storage,
  * @param master_fd       Descrittore del master thread per la comunicazione tra master e workers
  * @param client_fd       Descrittore del client che ha effettuato la richiesta
  * @param worker_id       Identificativo del worker che serve la richiesta
- * @param file_path       Path del file su cui efferruare l'operazione di lock
+ * @param file_path       Path del file su cui effettuare l'operazione di lock
  * 
  * @return                0 in caso di successo, -1 se storage è @c NULL , master_fd o client_fd sono negativi, file_path è 
  *                        @c NULL o la sua lunghezza è 0.
@@ -259,7 +259,7 @@ int unlock_file_handler(storage_t* storage,
 
 /**
  * @function              remove_file_handler()
- * @brief                 Server la richiesta di remove di un file. 
+ * @brief                 Serve la richiesta di remove di un file. 
  *                        Se riscontra che client_fd si è disconesso scrive a master_fd -(client_fd), 
  *                        altrimenti scrive client_fd.
  * 

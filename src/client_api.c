@@ -20,11 +20,11 @@
 #include <filesys_util.h>
 #include <util.h>
 
-/** File descriptor associato al socket */
+/* File descriptor associato al socket */
 static int g_socket_fd = -1;
 /* Path del socket file */
 static char g_sockname[UNIX_PATH_MAX];
-/** Flag che indica se le stampe sullo stdout sono abilitate */
+/* Flag che indica se le stampe sullo stdout sono abilitate */
 static bool print_enable = false;
 
 char* errno_to_str(int err) {

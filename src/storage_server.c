@@ -305,13 +305,14 @@ static void destroy_file(file_t* file) {
  * @param a                  Primo file da confrontare
  * @param b                  Secondo file da confrontare
  * 
- * @return                   1 se i file sono uguali, 0 altrimenti.
+ * @return                   1 se i file sono uguali, 0 altrimenti. Se i puntatori sono @c NULL errno viene settato a EINVAL
+ *                           e viene restituito 0.
  */
 static int cmp_file(void* a, void* b) {
-	if (!a && !b) 
-		return 1;
-	else if (!a || !b)
+	if (!a || !b) {
+		errno = EINVAL;
 		return 0;
+	}
 	file_t* f1 = a;
 	file_t* f2 = b;
 	return (strcmp(f1->path, f2->path) == 0);
@@ -384,13 +385,14 @@ static void destroy_evicted_file(evicted_file_t* evicted_file) {
  * @param a                  Primo file da confrontare
  * @param b                  Secondo file da confrontare
  *
- * @return                   1 se i file sono uguali, 0 altrimenti.
+ * @return                   1 se i file sono uguali, 0 altrimenti. Se i puntatori sono @c NULL errno viene settato a EINVAL
+ *                           e viene restituito 0.
  */
 static int cmp_evicted_file(void* a, void* b) {
-	if (!a && ! b)
-		return 1;
-	else if (!a || !b)
+	if (!a || !b) {
+		errno = EINVAL;
 		return 0;
+	}
 	evicted_file_t* f1 = a;
 	evicted_file_t* f2 = b;
 	return (strcmp(f1->path, f2->path) == 0);
@@ -405,7 +407,7 @@ static int cmp_evicted_file(void* a, void* b) {
  * @return                   Un puntatore a una struttura che rappresenta un client connesso al server in caso di successo,
  *                           NULL in caso di fallimento ed errno settato ad indicare l'errore.
  *                           In caso di fallimento errno può assumere i seguenti valori:
- *                           EINVAL es fd è < 0
+ *                           EINVAL se fd è < 0
  * @note                     Può fallire e settare errno se si verificano gli errori specificati da malloc() e list_create().
  */
 static client_t* init_client(int fd) {
@@ -863,7 +865,7 @@ static void notify_clients_file_not_exists(storage_t* storage,
 		EQM1_DO(int_list_head_remove(clients_waiting, &fd), r, EXTF);
 		LOG(log_record(storage->logger, "%d,%s,%s,%d,%s,%d",
 			worker_id, req_code_to_str(LOCK), resp_code_to_str(FILE_NOT_EXISTS), fd, file_path, 0));
-		/* invio al client che il file non esiste e comunico al master di aver servito il client
+		/* comunico al client che il file non esiste e al master di aver servito il client
 		   (in caso di errore chiudo la connessione del client) */
 		if (send_response_code(fd, FILE_NOT_EXISTS) == -1)
 			close_client_connection(storage, master_fd, fd, worker_id);
@@ -1363,7 +1365,7 @@ int open_file_handler(storage_t* storage,
 		destroy_evicted_file(evicted_file);
 	}
 
-	if (mode == OPEN_NO_FLAGS || mode == OPEN_LOCK) // in caso di create file_path è riferito nello storage
+	if (mode == OPEN_NO_FLAGS || mode == OPEN_LOCK)
 		free(file_path);
 
 	return 0;

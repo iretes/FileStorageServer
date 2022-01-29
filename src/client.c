@@ -21,20 +21,20 @@
 #include <filesys_util.h>
 #include <util.h>
 
-/** Secondi da dedicare ai tentativi di connessione verso il server */
+/* Secondi da dedicare ai tentativi di connessione verso il server */
 #define TRY_CONN_FOR_SEC 5
-/** Millisecondi da attendere tra un tentativo di connessione verso il server e il successivo */
+/* Millisecondi da attendere tra un tentativo di connessione verso il server e il successivo */
 #define RETRY_CONN_AFTER_MSEC 1000
-/** Massimo numero di richieste da effettuare nel caso in cui il server risponda che è troppo occupato */
+/* Massimo numero di richieste da effettuare nel caso in cui il server risponda con TEMPORARILY_UNAVAILABLE */
 #define MAX_REQ_TRIES 3
-/** Millisecondi da attendere tra una richiesta fallita perchè il server è troppo occupato e il tentativo di richiesta 
- * successivo*/
+/* Millisecondi da attendere tra una richiesta che ha ricevuto come risposta TEMPORARILY_UNAVAILABLE e il tentativo di 
+   richiesta successivo*/
 #define RETRY_REQ_AFTER_MSEC 1000
 
 /**
  * @def                        RETRY_IF_BUSY()
- * @brief                      Tenta al più MAX_REQ_TRIES volte la chiamata dell'API X nel caso in cui il server sia
- *                             occupato.
+ * @brief                      Tenta al più MAX_REQ_TRIES volte la chiamata dell'API X nel caso in cui il server risponda 
+ *                             con TEMPORARILY_UNAVAILABLE.
  * 
  * @param X                    La chiamata dell'API
  * @param ret                  Il valore ritornato da X
@@ -259,7 +259,7 @@ static int write_files_dir(cmdline_operation_t* cmdline_operation) {
 		PERRFMT("\nERR: list_create (%s)\n", strerror(errno));
 		return -1;
 	}
-	// vistio la directory salvando i path dei file incontrati
+	// visito la directory salvando i path dei file incontrati
 	int ret = visit_dir(cmdline_operation->dirname_in, cmdline_operation->n, cmdline_operation->files);
 	if (ret < 0) {
 		if (ret == -1) return -1;
