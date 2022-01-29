@@ -191,7 +191,7 @@ test2: $(BINDIR)/client $(BINDIR)/server clean_test2
 	echo "File di test generati";\
 	echo "======= Test della politica di espulsione FIFO =======";\
 	echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test2/fifo/config.txt &>test/test2/fifo/output/serverout.txt &\
+	$(BINDIR)/server -c test/test2/fifo/config.txt &>test/test2/fifo/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	echo "Avvio i client...";\
 	chmod +x test/test2/runclients.sh;\
@@ -205,7 +205,7 @@ test2: $(BINDIR)/client $(BINDIR)/server clean_test2
 	./statistiche.sh test/test2/fifo/output/log.csv &>test/test2/fifo/output/statistics.txt;\
 	echo "======= Test della politica di espulsione LFU =======";\
 	echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test2/lfu/config.txt &>test/test2/lfu/output/serverout.txt &\
+	$(BINDIR)/server -c test/test2/lfu/config.txt &>test/test2/lfu/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	echo "Avvio i client...";\
 	./test/test2/runclients.sh test/test2/lfu/output LFU;\
@@ -217,7 +217,7 @@ test2: $(BINDIR)/client $(BINDIR)/server clean_test2
 	./statistiche.sh test/test2/lfu/output/log.csv &>test/test2/lfu/output/statistics.txt;\
 	echo "======= Test della politica di espulsione LRU =======";\
 	echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test2/lru/config.txt &>test/test2/lru/output/serverout.txt &\
+	$(BINDIR)/server -c test/test2/lru/config.txt &>test/test2/lru/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	echo "Avvio i client...";\
 	./test/test2/runclients.sh test/test2/lru/output LRU;\
@@ -229,7 +229,7 @@ test2: $(BINDIR)/client $(BINDIR)/server clean_test2
 	./statistiche.sh test/test2/lru/output/log.csv &>test/test2/lru/output/statistics.txt;\
 	echo "======= Test della politica di espulsione LW =======";\
 	echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test2/lw/config.txt &>test/test2/lw/output/serverout.txt &\
+	$(BINDIR)/server -c test/test2/lw/config.txt &>test/test2/lw/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	echo "Avvio i client...";\
 	./test/test2/runclients.sh test/test2/lw/output LW;\
@@ -253,7 +253,7 @@ generate_test3_files: clean_test3
 
 test3: $(BINDIR)/client $(BINDIR)/server generate_test3_files
 	@echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test3/config_fifo.txt &> test/test3/output/serverout.txt &\
+	$(BINDIR)/server -c test/test3/config_fifo.txt &> test/test3/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	sleep 30 && kill -INT $$SERVER_PID &\
 	chmod +x ./test/test3/runclients.sh;\
@@ -274,7 +274,7 @@ test3: $(BINDIR)/client $(BINDIR)/server generate_test3_files
 
 test3_lfu: $(BINDIR)/client $(BINDIR)/server generate_test3_files
 	@echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test3/config_lfu.txt &> test/test3/output/serverout.txt &\
+	$(BINDIR)/server -c test/test3/config_lfu.txt &> test/test3/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	sleep 30 && kill -INT $$SERVER_PID &\
 	chmod +x ./test/test3/runclients.sh;\
@@ -295,7 +295,7 @@ test3_lfu: $(BINDIR)/client $(BINDIR)/server generate_test3_files
 
 test3_lru: $(BINDIR)/client $(BINDIR)/server generate_test3_files
 	@echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test3/config_lru.txt &> test/test3/output/serverout.txt &\
+	$(BINDIR)/server -c test/test3/config_lru.txt &> test/test3/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	sleep 30 && kill -INT $$SERVER_PID &\
 	chmod +x ./test/test3/runclients.sh;\
@@ -316,7 +316,7 @@ test3_lru: $(BINDIR)/client $(BINDIR)/server generate_test3_files
 
 test3_lw: $(BINDIR)/client $(BINDIR)/server generate_test3_files
 	@echo "Avvio il server";\
-	valgrind --leak-check=full $(BINDIR)/server -c test/test3/config_lw.txt &> test/test3/output/serverout.txt &\
+	$(BINDIR)/server -c test/test3/config_lw.txt &> test/test3/output/serverout.txt &\
 	SERVER_PID=$$!;\
 	sleep 30 && kill -INT $$SERVER_PID &\
 	chmod +x ./test/test3/runclients.sh;\
